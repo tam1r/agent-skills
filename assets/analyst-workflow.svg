@@ -1,0 +1,50 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="360" rx="28" fill="#F7F7FC"/>
+  <text x="60" y="70" fill="#111827" font-family="Arial, sans-serif" font-size="28" font-weight="700">Turn production feedback into a verified fix</text>
+  <text x="60" y="105" fill="#667085" font-family="Arial, sans-serif" font-size="17">Your coding agent follows the same controlled improvement loop as Agent Studio.</text>
+
+  <g transform="translate(60 150)">
+    <rect width="235" height="145" rx="20" fill="white" stroke="#D9D9EE" stroke-width="2"/>
+    <circle cx="38" cy="38" r="18" fill="#6C63D9"/>
+    <text x="38" y="44" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="700">1</text>
+    <text x="24" y="82" fill="#111827" font-family="Arial, sans-serif" font-size="20" font-weight="700">Investigate</text>
+    <text x="24" y="110" fill="#667085" font-family="Arial, sans-serif" font-size="15">Conversation, tools, prompt,</text>
+    <text x="24" y="132" fill="#667085" font-family="Arial, sans-serif" font-size="15">knowledge and feedback.</text>
+  </g>
+
+  <path d="M310 222H335" stroke="#6C63D9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M329 215L336 222L329 229" stroke="#6C63D9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(350 150)">
+    <rect width="235" height="145" rx="20" fill="white" stroke="#D9D9EE" stroke-width="2"/>
+    <circle cx="38" cy="38" r="18" fill="#6C63D9"/>
+    <text x="38" y="44" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="700">2</text>
+    <text x="24" y="82" fill="#111827" font-family="Arial, sans-serif" font-size="20" font-weight="700">Find the cause</text>
+    <text x="24" y="110" fill="#667085" font-family="Arial, sans-serif" font-size="15">Separate policy, knowledge,</text>
+    <text x="24" y="132" fill="#667085" font-family="Arial, sans-serif" font-size="15">tool and platform failures.</text>
+  </g>
+
+  <path d="M600 222H625" stroke="#6C63D9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M619 215L626 222L619 229" stroke="#6C63D9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(640 150)">
+    <rect width="235" height="145" rx="20" fill="white" stroke="#D9D9EE" stroke-width="2"/>
+    <circle cx="38" cy="38" r="18" fill="#6C63D9"/>
+    <text x="38" y="44" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="700">3</text>
+    <text x="24" y="82" fill="#111827" font-family="Arial, sans-serif" font-size="20" font-weight="700">Apply safely</text>
+    <text x="24" y="110" fill="#667085" font-family="Arial, sans-serif" font-size="15">Approve feedback or make a</text>
+    <text x="24" y="132" fill="#667085" font-family="Arial, sans-serif" font-size="15">narrow guarded edit.</text>
+  </g>
+
+  <path d="M890 222H915" stroke="#6C63D9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M909 215L916 222L909 229" stroke="#6C63D9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(930 150)">
+    <rect width="210" height="145" rx="20" fill="#111827"/>
+    <circle cx="38" cy="38" r="18" fill="#8B83EA"/>
+    <text x="38" y="44" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="17" font-weight="700">4</text>
+    <text x="24" y="82" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="700">Verify live</text>
+    <text x="24" y="110" fill="#D0D5DD" font-family="Arial, sans-serif" font-size="15">Read back the result and</text>
+    <text x="24" y="132" fill="#D0D5DD" font-family="Arial, sans-serif" font-size="15">close the feedback loop.</text>
+  </g>
+</svg>
