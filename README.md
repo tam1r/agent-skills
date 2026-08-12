@@ -32,7 +32,7 @@ new version, or add it to the coding agent's startup workflow.
 The skill contains MCP setup instructions. Adelante provides each customer with a scoped API key.
 Never commit that key to a repository.
 
-## More AI skills and courses
+## Want an AI support agent for your business?
 
-Explore [Behind the Craft](https://behindthecraft.com/), Tamir Bashkin's practical AI system with
-more than a dozen curated skills and hands-on courses.
+Visit [getadelante.com](https://getadelante.com/) to get an AI support agent built, launched, and
+continuously improved for your business.
