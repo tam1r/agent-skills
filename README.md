@@ -109,5 +109,5 @@ agents that answer customers, use approved tools, complete support work, and han
   ·
   <a href="https://www.getadelante.com/agent-platform">Agent Studio</a>
   ·
-  <a href="https://github.com/tam1r/agent-skills/issues">Support</a>
+  <a href="mailto:help@getadelante.com">Support</a>
 </p>
