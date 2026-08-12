@@ -4,11 +4,11 @@
   </a>
 </p>
 
-<h1 align="center">Agent Studio skills for your coding agent</h1>
+<h1 align="center">Manage your live support agent from Codex, Claude Code, or Cursor</h1>
 
 <p align="center">
-  Investigate real support conversations, improve your AI agent, and verify production fixes<br>
-  from Codex, Claude Code, Cursor, or any compatible coding agent.
+  Investigate support conversations, fix prompt and knowledge problems,<br>
+  and check the result in Agent Studio.
 </p>
 
 <p align="center">
@@ -29,11 +29,10 @@
 
 ## Adelante Agent Studio Analyst
 
-The Analyst skill gives your coding agent a safe operating process for Adelante Agent Studio. It
-can reconstruct a customer case, inspect the live prompt, knowledge, assigned-tool contracts, and
-feedback, then apply the smallest authorized fix and verify the live result.
-
-It is built for production support work—not generic chatbot prompting.
+The Analyst skill teaches your coding agent how to work safely in Adelante Agent Studio. It reads
+the customer conversation, prompt, knowledge, assigned-tool contracts, and feedback before it
+changes anything. When the cause is clear, it applies the smallest authorized fix and reads the
+live configuration again to make sure the change stuck.
 
 <p align="center">
   <img src="assets/analyst-workflow.svg" alt="Investigate, find the cause, apply safely, and verify live" width="100%">
@@ -49,15 +48,6 @@ It is built for production support work—not generic chatbot prompting.
 | Improve behavior | Applies a guarded prompt change only when a broad behavioral rule is necessary |
 | Audit your agent | Finds contradictions across prompt, knowledge, and available assigned-tool contracts |
 | Report outcomes | Analyzes support volume, handovers, resolution patterns, and attributed revenue |
-
-### Safety is part of the workflow
-
-- Access stays limited to the production agents assigned to your API key.
-- Shared tool descriptions, webhook URLs, credentials, and execution settings remain hidden.
-- Prompt and direct knowledge edits use guarded writes to avoid overwriting newer changes.
-- URL and Google Doc content is edited at its source, then reindexed by Agent Studio.
-- Every production change requires live read-back before it is reported as verified.
-- Admin and MCP feedback approval use the same standard feedback pipeline.
 
 ## Install
 
@@ -83,15 +73,15 @@ Replace `codex` with `claude-code`, `cursor`, or another agent supported by the
 
 ## Connect Agent Studio
 
-The skill contains the complete MCP setup instructions. Adelante provides each customer with a
-scoped Agent Studio API key; keep it out of git and load it from an environment variable.
+The skill includes the MCP setup instructions. Adelante gives each customer a scoped Agent Studio
+API key. Keep it out of git and load it from an environment variable.
 
 Once connected, start with:
 
 > Show me the production agents I can access and summarize their pending feedback. Do not change
 > anything yet.
 
-Then ask naturally—for example:
+Then ask:
 
 > Investigate ticket 96728. Reconstruct what happened, inspect the prompt, retrieved knowledge,
 > and tool results, then identify the root cause. Do not make changes.
