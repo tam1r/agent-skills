@@ -1,6 +1,6 @@
 ---
 name: adelante-agent-studio-analyst
-description: Analyze and safely remediate your company's AI support agent on Adelante Agent Studio — read conversations, inspect its prompt/tools/knowledge base, triage feedback, replace scoped KB snippets or prompts when authorized, and verify the live result. Use whenever the user asks about their support bot or AI agent, including conversation review, failure investigation, configuration audits, feedback remediation, support-quality analysis, or ROI reporting.
+description: Analyze and safely remediate your company's AI support agent on Adelante Agent Studio — read conversations, inspect its prompt/tools/knowledge base, triage feedback, replace scoped KB snippets or prompts when authorized, build allowlisted webhook tools for the agent when authorized, and verify the live result. Use whenever the user asks about their support bot or AI agent, including conversation review, failure investigation, configuration audits, feedback remediation, webhook tool building, support-quality analysis, or ROI reporting.
 ---
 
 # Adelante Agent Studio Analyst
@@ -52,14 +52,21 @@ an actual end-to-end test.
 
 - Your API key is scoped to specific agent(s). Anything outside that scope returns **404 or 403 —
   this is expected**, not an error to work around. Never try to enumerate or access other agents.
-- Viewer keys are read-only. Analyst keys can submit and approve feedback and can use the dedicated
-  `replaceAgentPrompt` and `replaceSnippetContent` remediation operations when their component and
-  agent scopes permit it. Broader agent, tool, document, and knowledge-base writes remain forbidden.
+- Viewer keys are read-only. Analyst keys can submit and approve feedback, can use the dedicated
+  `replaceAgentPrompt` and `replaceSnippetContent` remediation operations, and can build webhook
+  tools through the agent webhook tool operations (see "Building webhook tools") when their
+  component and agent scopes permit it. Broader agent, tool, document, and knowledge-base writes
+  remain forbidden, and a tool whose scope is not `agent_specific` can never be updated,
+  activated, attached, or detached with an analyst key.
 - Viewer calls to any write return 403. Do not replace the key, broaden its components,
   or change its `agentIds` to work around a permission failure.
-- Scoped tool reads expose `id`, `name`, and `parameters_schema`. A description is present only for
-  an `agent_specific` tool. Webhook URLs, execution settings, auth, examples, and shared/general
-  descriptions are intentionally unavailable; do not infer or attempt to discover them.
+- `listTools`, `getTool`, `listAgentTools`, and `getAgent` return every tool bound to your agent,
+  shared/general tools included, reduced to `id`, `name`, and `parameters_schema`. A description is
+  present only for an `agent_specific` tool. Webhook URLs, execution settings, auth, examples, and
+  shared/general descriptions are intentionally unavailable there; do not infer or attempt to
+  discover them. The agent webhook tool operations show more (URL, method, header names, action
+  copy, activation state) only for webhook tools you can manage, and never return secret header
+  values.
 - Conversations contain real end-customer data. Don't paste full transcripts into external
   services, and quote only what the analysis needs.
 
@@ -110,6 +117,10 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `dismissFeedbackIssue` | Analyst only: dismisses a scoped pending/escalated issue with a concrete reason |
 | `replaceSnippetContent` | Analyst only: guarded replacement of one scoped internal snippet; URL snippets return their source URL |
 | `replaceAgentPrompt` | Analyst only: guarded replacement of one scoped agent's complete prompt |
+| `listAgentWebhookTools` / `getAgentWebhookTool` | Webhook tools you can manage for the agent: URL, method, header names (never values), schema, action copy, `is_active`, `attached`. Viewer keys get only `id`, `name`, `parameters_schema`, description |
+| `createAgentWebhookTool` | Analyst only: creates an inactive webhook tool attached to the agent; URL host must be in the agent's `allowed_domains` |
+| `updateAgentWebhookTool` | Analyst only: edits a manageable webhook tool; `is_active: true/false` activates or deactivates it |
+| `attachAgentWebhookTool` / `detachAgentWebhookTool` | Analyst only: attaches or detaches a manageable webhook tool; never deletes it |
 
 ## Reading responses
 
@@ -296,6 +307,195 @@ configuration edits, not an alternative feedback approval pipeline.
    Report only the returned outcome. If the issue is escalated, stale, already claimed, outside
    scope, or no longer pending, report the rejection and do not create a replacement unless asked.
 
+## Building webhook tools
+
+A webhook tool lets the bot call an HTTP endpoint you control (a Make or Zapier scenario, or an
+Adelante-hosted endpoint) mid-conversation: look up an order, create a lead, book a slot. Use this
+section only when the user explicitly asked for a new or changed tool on a named agent.
+
+### When to build one
+
+Build a tool when the bot needs live data or must perform an action that the prompt and KB cannot
+supply. Do not build one to hold static facts (put them in the KB), to change tone or policy (that
+is the prompt), or to copy a shared tool the agent already has. One integration is one tool: use an
+`action` enum for its operations instead of several near-identical tools.
+
+### The allowlist (read this first)
+
+- Webhook hosts are governed by the agent's `allowed_domains` (the same list that controls where
+  the chat widget may be embedded and which sites web search uses). Read it with `getAgent`. The
+  tool URL must be `https`, its host must equal an entry or be a subdomain of one, and it must also
+  be inside the platform's global webhook allowlist (getadelante.com, make.com, zapier.com).
+  Customer website entries such as `acme.example` never permit a webhook.
+- **No matching entry = you cannot create a tool or change a URL to that host.** Stop and ask the
+  user to have an Adelante admin add the exact webhook host (for example `hook.eu2.make.com`) to the
+  agent's allowed domains. Never try another agent, another URL form, or a redirecting URL to get
+  around it.
+- Hosts should be narrow. Make and Zapier hosts are shared by every Make/Zapier customer, so admins
+  add the specific regional host your account uses, not all of `make.com`. Anything added there
+  also becomes a valid widget-embedding and web-search domain for the agent.
+- You can read `allowed_domains` but never change it. `updateAgent` is not available to analyst
+  keys.
+
+### Which tools you can manage
+
+You can manage only tools created for this agent with `createAgentWebhookTool`, and only while they
+are `agent_specific`, on-demand webhook tools assigned to no other agent. Tools an admin created are
+out of scope even when this agent uses them: these operations return `404` for them, and changes to
+them go through an Adelante admin. Shared/general tools, workflow tools, pre-conversation tools, and
+tools attached to another agent are refused on every write (`403`). A tool you created stays
+manageable after you detach it. There is no delete: detach instead.
+
+### Lifecycle
+
+1. **Design.** Write down the actions, the parameters each needs, what the webhook returns, and what
+   the bot must say for success, "not found", and failure. Confirm the receiving scenario exists and
+   answers with JSON.
+2. **Check the allowlist.** `getAgent` → `allowed_domains` contains your host (or a parent of it). If not, stop.
+3. **Create.** `createAgentWebhookTool`. The tool is created **inactive** and already attached, so
+   the bot cannot call it yet.
+4. **Verify.** `getAgentWebhookTool`: check URL, method, header names (values are never shown), `parameters_schema`, `action_param`, `action_descriptions`, `is_active: false`,
+   `attached: true`. Test the scenario itself with a synthetic payload shaped like the example
+   below, with `isTest: true`.
+5. **Activate.** `updateAgentWebhookTool` with `{ "is_active": true }` only after the user approves.
+   If the prompt must tell the bot when to use the tool, make that change through the prompt
+   remediation process, not inside this step.
+6. **Monitor.** Read the next real conversations that call the tool (`getConversation` →
+   `toolUses`): check arguments, results, and what the bot told the customer.
+7. **Deactivate on problems.** `updateAgentWebhookTool` with `{ "is_active": false }` stops all
+   calls immediately. Fix, re-verify, then reactivate. Detach only when the tool should leave the
+   agent entirely.
+
+### Naming and descriptions
+
+- `name` is global across all Agent Studio tools, lowercase letters, digits and underscores only,
+  and cannot be changed later. Prefix it with the agent slug (for example `acme_orders`). A `409`
+  means the name is taken.
+- `display_name` is for humans; `description` is for the model. Say what the tool does, when to call
+  it, when **not** to call it, and which details to collect from the customer first. Keep policy
+  and wording rules in the prompt, not in the description.
+
+### Parameter schema
+
+- `parameters_schema` is JSON Schema: `{ "type": "object", "properties": { ... }, "required": [...] }`.
+  Give every property a `type` and a `description` with a concrete format example.
+- Put truly mandatory fields in `required`. Agent Studio refuses a call with a missing or empty
+  required parameter before anything is sent, and asks the model to retry.
+- Use `enum` for closed sets.
+- Do not add parameters for context the platform already sends (conversation ID, phone, channel;
+  see below).
+- `identifier_type` and `identifier_value` are reserved names: when `identifier_type` is `phone`,
+  the value is normalized to E.164 or the call is refused.
+
+### One tool with an `action` enum
+
+For several operations on one system, add a required `action` string property with an `enum`, set
+`action_param: "action"`, and give `action_descriptions` exactly one non-empty description per enum
+value. The model sees those descriptions; admins can enable a subset of actions per agent. Changing
+the enum later requires `parameters_schema`, `action_param`, and `action_descriptions` in the same
+update.
+
+### What the webhook receives
+
+Headers are always `Content-Type: application/json` plus your `webhook_headers`. Use `POST`: with
+`GET` no body is sent and there is no query string, so the webhook receives no parameters or
+context at all.
+
+The JSON body is built in this order, later keys winning on a name collision:
+
+1. Context fields (sent on every live, playground, and eval call):
+   - `conversationId` (string): the helpdesk conversation ID.
+   - `appId` (string): the agent's helpdesk app ID; `""` when not configured.
+   - `channel` (string): the conversation channel, for example `whatsapp` or `web`; can be `""`.
+   - `phone` (string): the customer phone when the channel knows it; on WhatsApp it is E.164
+     (`+972...`). Omitted when unknown.
+   - `isTest` (boolean): always present; `true` for playground and eval runs. Any tool that changes
+     something (cancel, refund, dispatch, create a lead) must do nothing real when it is `true`.
+   - `integrationId` (string): the agent's integration ID; `""` when not configured.
+   - `currentMessageId` and `current_message_id` (string): the customer message that triggered the
+     turn; only when the channel provides one.
+   - `metadata` (object): `agentId`, `agentSlug`, `latestUserMessage` (omitted for zero-data-retention
+     agents), plus channel-specific session fields that vary by helpdesk. Do not depend on
+     undocumented keys.
+   - `allowedDomains` (array of strings): the agent's website allowlist used for the web widget and
+     web search. It is not the webhook allowlist.
+   - `agentName` (string): the agent's display name.
+2. `sourceChannel` (string): the same value as `channel`, only when non-empty.
+3. The model's arguments, except values that are `null` or `""`. A non-empty argument overrides a
+   context field with the same name (for example a `phone` parameter the customer typed wins over
+   the channel phone); an empty one leaves the context value in place.
+
+Example body for `{ "action": "get_status", "order_number": "10423" }` on WhatsApp:
+
+```json
+{
+  "conversationId": "65f1c0ffee0000000000abcd",
+  "appId": "5f0a1b2c3d4e5f6a7b8c9d0e",
+  "channel": "whatsapp",
+  "phone": "+972501234567",
+  "isTest": false,
+  "integrationId": "64aa00000000000000000001",
+  "currentMessageId": "65f1c0ffee0000000000beef",
+  "current_message_id": "65f1c0ffee0000000000beef",
+  "metadata": {
+    "agentId": "0b6c1d7e-1111-4222-8333-944455556666",
+    "agentSlug": "acme",
+    "latestUserMessage": "Where is order 10423?"
+  },
+  "allowedDomains": ["acme.example"],
+  "agentName": "Acme Support",
+  "sourceChannel": "whatsapp",
+  "action": "get_status",
+  "order_number": "10423"
+}
+```
+
+### What the webhook must return
+
+- Answer within **90 seconds** with a 2xx status and a JSON body (`Content-Type: application/json`)
+  of at most **1 MB**. The model reads the body, so return short, explicit fields such as
+  `{ "success": true, "status": "shipped", "tracking_url": "..." }` or
+  `{ "success": false, "reason": "order_not_found" }`.
+- Non-2xx responses, timeouts, oversized bodies, and redirects (redirects are never followed) reach
+  the model as a failed call.
+- Make: the scenario must end with a **Webhook response** module. A switched-off or queued scenario
+  answers the plain text `Accepted`; Agent Studio treats that as a failure. Plain-text bodies are
+  passed to the model as `{ "result": "<text>" }`.
+
+### Secrets
+
+- Put API keys in `webhook_headers` (for example `x-api-key` or `Authorization`). `Authorization`,
+  `X-API-Key`, and any header named in `sensitive_headers` are encrypted at rest. Responses list
+  header names only, never values. Never put secrets in the URL, the description, or KB.
+- `webhook_headers` in an update replaces the whole header set. Send `__UNCHANGED__` as the value of
+  a stored secret header to keep it, and resend every non-secret header with its value.
+  `sensitive_headers` can only be sent together with
+  `webhook_headers`.
+- Changing `webhook_url` drops every stored secret header, so send fresh secret values with the new
+  URL.
+
+### Duplicate calls and idempotency
+
+Agent Studio runs an identical call (same tool, same arguments, same conversation) only once within
+at least two minutes and replays the first result to repeats. Your webhook must still be
+idempotent: a timed-out call may have completed remotely, and the customer can repeat the request
+later. Deduplicate on a business key (order number plus action, or `currentMessageId`) before
+creating anything.
+
+`on_error` and `timeout_ms` only affect pre-conversation tools; on-demand tools always use the
+90-second limit.
+
+### Common errors
+
+| Status | Meaning | What to do |
+|---|---|---|
+| `400` | Invalid body: bad name, missing field, forbidden field (`workflow_steps`, `webhook_authorization`, `tags`, `name` in an update, a non-webhook mode, `pre_conversation`, `general` scope), action enum and descriptions out of sync, or `__UNCHANGED__` for a header that is not stored as a secret | Fix the request; do not retry unchanged |
+| `403` | URL host not in the agent's `allowed_domains` or outside the global webhook allowlist, tool is shared/general or assigned to another agent, or your key lacks the `tools` component or analyst role | Stop. Ask for an admin allowlist change or a different tool; never work around it |
+| `404` | Agent outside your scope, or the tool was not created for this agent with `createAgentWebhookTool` (admin-created tools) | Check the slug and tool ID; do not probe |
+| `409` | Tool name already exists | Choose a different, agent-prefixed name |
+
+There is no `422` on these operations; validation problems return `400`.
+
 ## Reading a conversation payload
 
 - `messages[]` — the transcript. `role` is `user` | `assistant` | `agent` (human agent);
@@ -313,5 +513,5 @@ configuration edits, not an alternative feedback approval pipeline.
 - When you recommend a fix, say where it belongs: system prompt, a specific tool's description,
   a specific KB chunk/topic, or platform configuration.
 - Never claim that submission changed production. Production changes only after a successful
-  `approveFeedbackFix`, `replaceSnippetContent`, or `replaceAgentPrompt` call followed by live
-  read-back verification.
+  `approveFeedbackFix`, `replaceSnippetContent`, `replaceAgentPrompt`, or agent webhook tool call
+  followed by live read-back verification.
