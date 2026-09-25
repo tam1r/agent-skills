@@ -233,8 +233,8 @@ After explicit approval of the specific change and fresh live verification, choo
 - If the pending proposal still exactly matches the current target and the independently verified
   intended fix, call `approveFeedbackFix`, then perform live read-back.
 - If the proposal is stale, incomplete, or needs reconstruction, use the dedicated guarded
-  replacement operation, perform live read-back, then call `dismissFeedbackIssue` with the concrete
-  reason. Never approve the overlapping proposal after applying a direct replacement.
+  replacement operation and perform live read-back. Present the separate dismissal action and
+  reason for approval; only after that approval call `dismissFeedbackIssue`. Never approve the overlapping proposal after applying a direct replacement.
 
 ## KB remediation process
 
@@ -256,7 +256,8 @@ Use this process for every proposed KB change.
    procedure, or routing trigger. Use a prompt change only for behavior that truly applies across
    scenarios. Update generic KB content too when it would override the specific rule. Do not change
    a shared tool; shared-tool changes require explicit approval and an operator-capable surface.
-5. **Choose and guard one mutation path.** Re-read the live target immediately before mutation. If
+5. **Choose and guard one mutation path.** Present this exact change and obtain explicit approval
+   before proceeding. Re-read the live target immediately before mutation. If
    its document is URL-sourced, choose between two distinct paths. If a pending feedback proposal
    remains the independently verified intended fix, `approveFeedbackFix`
    may create an Internal Knowledge override through the standard feedback executor; overrides are allowed only through this
@@ -278,8 +279,8 @@ Use this process for every proposed KB change.
    customer behavior.
 7. **Resolve the feedback.** The approval path is complete only when its issue reports `applied` and
    read-back passes. If the dedicated replacement path applied the fix, do not approve the now-
-   overlapping proposal; call `dismissFeedbackIssue` with a concrete reason that identifies the
-   verified direct fix. For an engineering or tool defect, create or reuse a verified GitHub issue
+   overlapping proposal. Present dismissal of that issue and its reason as a separate action,
+   obtain approval, then call `dismissFeedbackIssue` identifying the verified direct fix. For an engineering or tool defect, create or reuse a verified GitHub issue
    labeled `client work` only when a GitHub integration is available and authorized, then report
    whether feedback should be retained or dismissed.
 8. **Report the outcome.** Include the agent, issue or ticket, root cause, exact target changed,
@@ -309,7 +310,8 @@ Prompt changes have broader impact and require a stricter process.
    Include concrete triggers, required action, prohibited behavior, and tool-result semantics where
    relevant. Add an explicit override only when an uneditable base instruction conflicts. Do not
    bundle unrelated policy changes.
-5. **Choose and guard one mutation path.** Call `getAgentPrompt` immediately before writing. If the
+5. **Choose and guard one mutation path.** Present the exact prompt change and obtain explicit
+   approval before proceeding. Call `getAgentPrompt` immediately before writing. If the
    pending proposal still exactly matches the live prompt and independently verified intended fix,
    call `approveFeedbackFix`. Otherwise, for a narrow edit, call `patchAgentPrompt` with the `sha256`
    you just read as `expectedPromptHash`, a short literal `oldText` copied exactly from the live
@@ -332,8 +334,8 @@ Prompt changes have broader impact and require a stricter process.
    incorrect tool use. Unless an approved non-production test was actually run, call this
    configuration read-back verification, not an end-to-end test.
 8. **Resolve and report.** The approval path is complete only when its issue reports `applied` and
-   read-back passes. If the dedicated replacement path applied the rule, dismiss the overlapping
-   proposal with a concrete reason rather than approving a stale diff. Report the agent, root cause,
+   read-back passes. If the dedicated replacement path applied the rule, present a separate
+   dismissal action with its reason, obtain approval, then dismiss the overlapping proposal. Report the agent, root cause,
    exact prompt section changed, read-back result, expected behavior, and final feedback state or
    required operator action.
 
@@ -425,19 +427,23 @@ manageable after you detach it. There is no delete: detach instead.
    the bot must say for success, "not found", and failure. Confirm the receiving scenario exists and
    answers with JSON.
 2. **Check the allowlist.** The host must match either the global webhook allowlist or `getAgent` → `allowed_domains` (including permitted parent-domain matches). If neither matches, propose a separate approved addition with `replaceAgentAllowedDomains`, then re-read. Do not add redundant entries merely because the host is already globally allowed.
-3. **Create.** `createAgentWebhookTool`. The tool is created **inactive** and already attached, so
-   the bot cannot call it yet.
+3. **Create.** Present the exact create-and-attach payload for approval. After approval, call
+   `createAgentWebhookTool`. The tool is created **inactive** and already attached, so the bot
+   cannot call it yet. Inactivity does not exempt creation from approval.
 4. **Verify.** `getAgentWebhookTool`: check URL, method, header names (values are never shown), `parameters_schema`, `action_param`, `action_descriptions`, `is_active: false`,
    `attached: true`. Test the scenario itself with a synthetic payload shaped like the example
    below, with `isTest: true`.
-5. **Activate.** `updateAgentWebhookTool` with `{ "is_active": true }` only after the user approves.
+5. **Activate.** Present activation of this exact tool as a separate proposed action; only after
+   approval call `updateAgentWebhookTool` with `{ "is_active": true }`.
    If the prompt must tell the bot when to use the tool, make that change through the prompt
    remediation process, not inside this step.
 6. **Monitor.** Read the next real conversations that call the tool (`getConversation` →
    `toolUses`): check arguments, results, and what the bot told the customer.
-7. **Deactivate on problems.** `updateAgentWebhookTool` with `{ "is_active": false }` stops all
-   calls immediately. Fix, re-verify, then reactivate. Detach only when the tool should leave the
-   agent entirely.
+7. **Handle problems.** Report the problem and propose deactivation of the exact tool. Obtain
+   approval before `updateAgentWebhookTool` with `{ "is_active": false }`, which stops live calls.
+   Each subsequent update, reactivation, attachment or detachment is a separate proposed action
+   requiring its own approval and fresh state read. Re-verify after each approved change. A broad
+   troubleshooting request does not authorize any of these writes.
 
 ### Naming and descriptions
 
