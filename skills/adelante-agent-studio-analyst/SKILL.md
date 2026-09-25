@@ -1,6 +1,6 @@
 ---
 name: adelante-agent-studio-analyst
-description: Investigate Agent Studio support and propose guarded fixes.
+description: Analyze Agent Studio support, audit configuration, report analytics and ROI, investigate conversations and feedback, build webhook tools, and apply explicitly approved prompt or knowledge fixes. Use for scoped support operations and scheduled analysis.
 ---
 
 # Adelante Agent Studio Analyst
@@ -28,7 +28,7 @@ still apply; approval never permits bypassing RBAC or mutating a shared tool wit
 An explicitly approved workflow or schedule may also authorize bounded, PII-free proposal,
 audit, and measurement notes for its assigned agents and window. That authorization covers only
 recording its findings and proposal state; it never approves the proposed production change.
-Other note creation/appends require specific approval. Re-read after ambiguous writes before retrying.
+An explicit read-only request creates no notes. Other note creation/appends require specific approval. Re-read after ambiguous writes before retrying.
 
 ## Quickstart: what you can ask
 
