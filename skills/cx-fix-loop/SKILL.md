@@ -108,9 +108,14 @@ analysis, present a draft without persisting notes or marking it actionable.
 6. Only after successful verification and audit, close an explicitly identified
    overlapping feedback issue whose exact closure action and reason were included
    in this approved proposal. Otherwise suggest closure without writing:
-   dismiss the matching pending issue with the direct-fix reason or resolve a
-   matching escalated issue with a note. Recheck status first; do not approve a
-   second fix. Report closure failures separately from the applied bot change.
+   use `dismissFeedbackIssue` for the matching pending issue with its approved
+   reason, or `resolveFeedbackIssue` for the matching escalated issue with the
+   approved `note`. The [customer MCP contract](https://github.com/tam1r/agent-studio/blob/main/docs/customer-mcp.md)
+   supports resolution after a manual fix; this marks the issue applied, not a
+   new "resolved" status. Require the exact operation in live tool discovery;
+   if unavailable, report closure as blocked instead of substituting another
+   operation. Recheck status first; do not approve a second fix. Report closure
+   failures separately from the applied bot change.
 
 On timeout, crash recovery or an ambiguous result, never replay the bot write.
 Re-read live state: if it equals the expected-after value, recover the applied
