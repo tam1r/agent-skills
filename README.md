@@ -31,7 +31,7 @@
 
 The Analyst skill teaches your coding agent how to work safely in Adelante Agent Studio. It reads
 the customer conversation, prompt, knowledge, assigned-tool contracts, and feedback before it
-changes anything. When the cause is clear, it applies the smallest authorized fix and reads the
+changes anything. After you approve a specific proposed change, it applies the guarded fix and reads the
 live configuration again to make sure the change stuck.
 
 <p align="center">
@@ -78,8 +78,7 @@ API key. Keep it out of git and load it from an environment variable.
 
 Once connected, start with:
 
-> Show me the production agents I can access and summarize their pending feedback. Do not change
-> anything yet.
+> For the assigned agent `<agent-slug>`, summarize pending feedback. Propose fixes for approval.
 
 Then ask:
 
