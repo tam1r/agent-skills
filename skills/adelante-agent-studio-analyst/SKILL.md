@@ -1,6 +1,6 @@
 ---
 name: adelante-agent-studio-analyst
-description: Analyze Agent Studio support, audit configuration, report analytics and ROI, investigate conversations and feedback, build webhook tools, and apply explicitly approved prompt or knowledge fixes. Use for scoped support operations and scheduled analysis.
+description: Analyze an AI support agent or support bot on Agent Studio, audit configuration, report analytics and ROI, investigate conversations and feedback, build webhook tools, and apply explicitly approved prompt or knowledge fixes. Use for scoped support operations and scheduled analysis.
 ---
 
 # Adelante Agent Studio Analyst
@@ -233,8 +233,19 @@ After explicit approval of the specific change and fresh live verification, choo
 - If the pending proposal still exactly matches the current target and the independently verified
   intended fix, call `approveFeedbackFix`, then perform live read-back.
 - If the proposal is stale, incomplete, or needs reconstruction, use the dedicated guarded
-  replacement operation and perform live read-back. Present the separate dismissal action and
-  reason for approval; only after that approval call `dismissFeedbackIssue`. Never approve the overlapping proposal after applying a direct replacement.
+  replacement operation and perform live read-back. Then follow the feedback closure process
+  below, with separate approval for the exact issue/status transition. Never approve the
+  overlapping proposal after applying a direct replacement.
+
+### Feedback closure after a direct fix
+
+Re-read the feedback issue and verify the direct fix before proposing any status change.
+For an obsolete `pending` proposal, propose `dismissFeedbackIssue` with the verified fix reason.
+For an `escalated` or `failed` issue that the manual fix resolved, propose `resolveFeedbackIssue`
+with a note describing the verified change; this records it as applied. If it is already applied,
+dismissed, or still analyzing/applying, report that state and do not blindly close it.
+Obtain separate approval for the exact closure action and issue ID before calling either tool.
+Approval of the configuration change alone does not authorize feedback closure.
 
 ## KB remediation process
 
@@ -279,8 +290,9 @@ Use this process for every proposed KB change.
    customer behavior.
 7. **Resolve the feedback.** The approval path is complete only when its issue reports `applied` and
    read-back passes. If the dedicated replacement path applied the fix, do not approve the now-
-   overlapping proposal. Present dismissal of that issue and its reason as a separate action,
-   obtain approval, then call `dismissFeedbackIssue` identifying the verified direct fix. For an engineering or tool defect, create or reuse a verified GitHub issue
+   overlapping proposal. Follow **Feedback closure after a direct fix**: re-read status, propose
+   dismissal of an obsolete pending proposal or resolution of an escalated/failed issue, and
+   obtain separate approval before that closure write. For an engineering or tool defect, create or reuse a verified GitHub issue
    labeled `client work` only when a GitHub integration is available and authorized, then report
    whether feedback should be retained or dismissed.
 8. **Report the outcome.** Include the agent, issue or ticket, root cause, exact target changed,
@@ -334,8 +346,8 @@ Prompt changes have broader impact and require a stricter process.
    incorrect tool use. Unless an approved non-production test was actually run, call this
    configuration read-back verification, not an end-to-end test.
 8. **Resolve and report.** The approval path is complete only when its issue reports `applied` and
-   read-back passes. If the dedicated replacement path applied the rule, present a separate
-   dismissal action with its reason, obtain approval, then dismiss the overlapping proposal. Report the agent, root cause,
+   read-back passes. If the dedicated replacement path applied the rule, follow **Feedback closure
+   after a direct fix** and obtain separate approval of its status-appropriate closure action. Report the agent, root cause,
    exact prompt section changed, read-back result, expected behavior, and final feedback state or
    required operator action.
 
@@ -427,7 +439,9 @@ manageable after you detach it. There is no delete: detach instead.
    the bot must say for success, "not found", and failure. Confirm the receiving scenario exists and
    answers with JSON.
 2. **Check the allowlist.** The host must match either the global webhook allowlist or `getAgent` → `allowed_domains` (including permitted parent-domain matches). If neither matches, propose a separate approved addition with `replaceAgentAllowedDomains`, then re-read. Do not add redundant entries merely because the host is already globally allowed.
-3. **Create.** Present the exact create-and-attach payload for approval. After approval, call
+3. **Create.** Present the exact non-secret create-and-attach configuration and header names for approval.
+   Redact every credential/header secret value; confirm it will be supplied through the approved
+   secret channel without printing it into chat or logs. After approval, call
    `createAgentWebhookTool`. The tool is created **inactive** and already attached, so the bot
    cannot call it yet. Inactivity does not exempt creation from approval.
 4. **Verify.** `getAgentWebhookTool`: check URL, method, header names (values are never shown), `parameters_schema`, `action_param`, `action_descriptions`, `is_active: false`,
@@ -442,6 +456,7 @@ manageable after you detach it. There is no delete: detach instead.
 7. **Handle problems.** Report the problem and propose deactivation of the exact tool. Obtain
    approval before `updateAgentWebhookTool` with `{ "is_active": false }`, which stops live calls.
    Each subsequent update, reactivation, attachment or detachment is a separate proposed action
+   (redact all credential values in its preview)
    requiring its own approval and fresh state read. Re-verify after each approved change. A broad
    troubleshooting request does not authorize any of these writes.
 
