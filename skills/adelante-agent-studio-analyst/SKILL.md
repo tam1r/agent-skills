@@ -53,7 +53,7 @@ an actual end-to-end test.
 - Your API key is scoped to specific agent(s). Anything outside that scope returns **404 or 403 —
   this is expected**, not an error to work around. Never try to enumerate or access other agents.
 - Viewer keys are read-only. Analyst keys can submit and approve feedback, can use the dedicated
-  `replaceAgentPrompt` and `replaceSnippetContent` remediation operations, and can build webhook
+  `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, `replaceSnippetContent`, and `addSnippet` remediation operations, and can build webhook
   tools through the agent webhook tool operations (see "Building webhook tools") when their
   component and agent scopes permit it. Broader agent, tool, document, and knowledge-base writes
   remain forbidden, and a tool whose scope is not `agent_specific` can never be updated,
@@ -103,20 +103,25 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 |---|---|
 | `listAgents` | The agent(s) your key can see (slug, name, model, config) |
 | `getAgent` | Full agent config: system prompt, model, temperature, thinking settings, bound tools |
+| `getAgentPrompt` | Only the exact stored system prompt and its `sha256`; use this instead of `getAgent` when you only need the prompt |
 | `listConversations` | Conversation list for an agent, newest first (`limit`/`offset`; test sessions excluded unless `include_test=true`) |
 | `getConversation` | Full transcript: messages (with `thinking` on AI messages when enabled), `toolUses`, metadata |
 | `resolveTicketConversation` | Helpdesk ticket number (e.g. Zendesk `96728`) → its conversation |
 | `listAgentTools` / `listTools` / `getTool` | Bound tool IDs, names, and parameter schemas; descriptions only for `agent_specific` tools |
 | `listAgentKnowledgeBases` / `listKnowledgeBases` / `getKnowledgeBase` | Knowledge bases linked to the agent |
-| `listDocuments` / `getDocument` / `listChunks` / `listSnippets` | KB content the agent answers from |
+| `listDocuments` / `getDocument` / `listSnippets` | KB content the agent answers from |
 | `getAgentRoutingIndex` | The topic index the agent uses to pick KB chunks |
 | `listFeedbackIssues` | Feedback issues filed against the agent (`agentSlug` required; filter by `status`, `source`, `startDate`/`endDate`) |
 | `getAttributedRevenue` | Revenue attributed to the agent's conversations (`agentSlug` required; `days` or `startDate`/`endDate`) |
 | `submitFeedback` | Analyst only: creates and analyzes feedback for a scoped conversation |
 | `approveFeedbackFix` | Analyst only: applies an inspected, eligible pending fix for a scoped issue |
 | `dismissFeedbackIssue` | Analyst only: dismisses a scoped pending/escalated issue with a concrete reason |
-| `replaceSnippetContent` | Analyst only: guarded replacement of one scoped internal snippet; URL snippets return their source URL |
-| `replaceAgentPrompt` | Analyst only: guarded replacement of one scoped agent's complete prompt |
+| `resolveFeedbackIssue` | Analyst only: marks a scoped escalated/failed issue as applied after a manual fix, with a required note describing what changed |
+| `replaceSnippetContent` | Analyst only: guarded replacement of one scoped internal snippet, optionally with its routing `topic`/`trigger`; URL snippets return their source URL |
+| `addSnippet` | Analyst only: adds one snippet (`content`, `topic`, optional `trigger`) to a document in a KB used only by your agents; a URL-sourced target lands in the KB's Knowledge Additions document; content is LLM-refined, so read it back |
+| `patchAgentPrompt` | Analyst only: replaces one unique literal fragment of a scoped agent's prompt (`expectedPromptHash`, `oldText`, `newText`); the server builds the new prompt |
+| `replaceAgentPrompt` | Analyst only: guarded replacement of one scoped agent's complete prompt, for explicitly authorized full rewrites |
+| `replaceAgentAllowedDomains` | Analyst only: guarded replacement of one scoped agent's complete `allowed_domains` list (`expectedDomains` from `getAgent`, `newDomains` bare hostnames); also governs webhook hosts |
 | `listAgentWebhookTools` / `getAgentWebhookTool` | Webhook tools you can manage for the agent: URL, method, header names (never values), schema, action copy, `is_active`, `attached`. Viewer keys get only `id`, `name`, `parameters_schema`, description |
 | `createAgentWebhookTool` | Analyst only: creates an inactive webhook tool attached to the agent; URL host must be in the agent's `allowed_domains` |
 | `updateAgentWebhookTool` | Analyst only: edits a manageable webhook tool; `is_active: true/false` activates or deactivates it |
@@ -141,7 +146,7 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 2. Read the transcript in order. For each AI message, check `thinking` (why it decided what it
    did) and its `toolCalls`/`toolUses` (what data it actually had).
 3. If the answer looks wrong, check the sources: `getAgent` (system prompt rules), the tool
-   result it relied on, and the KB chunk it likely used (`listChunks`, `getAgentRoutingIndex`).
+   result it relied on, and the KB chunk it likely used (`listSnippets`, `getAgentRoutingIndex`).
 4. Verdict format: what the customer wanted → what the agent did → root cause (prompt rule /
    tool output / KB gap / model behavior) → recommended fix.
 
@@ -162,7 +167,7 @@ conversation via `conversation_id`/`ticket_id`, and flag recurring root causes.
 
 **Agent configuration review**:
 1. `getAgent` for the system prompt and settings; `listAgentTools` for tool descriptions;
-   `listAgentKnowledgeBases` + `listChunks` for content.
+   `listAgentKnowledgeBases` + `listSnippets` for content.
 2. Look for: contradictions between prompt and KB, tool descriptions that instruct escalation
    too eagerly, KB gaps for questions that appear often in conversations.
 
@@ -196,7 +201,9 @@ Use this process for every proposed KB change.
    authoritative sources. Proceed autonomously when the policy is clear. Ask before changing
    anything when sources conflict or the business rule is genuinely ambiguous.
 4. **Choose the smallest safe fix.** Prefer a localized snippet update for a specific fact,
-   procedure, or routing trigger. Use a prompt change only for behavior that truly applies across
+   procedure, or routing trigger. Add a new snippet only when the knowledge is missing from the
+   KB; if a snippet already covers the question, edit that snippet instead of adding a competing
+   one. Use a prompt change only for behavior that truly applies across
    scenarios. Update generic KB content too when it would override the specific rule. Do not change
    a shared tool; shared-tool changes require explicit approval and an operator-capable surface.
 5. **Choose and guard one mutation path.** Re-read the live target immediately before mutation. If
@@ -214,9 +221,21 @@ Use this process for every proposed KB change.
    narrow updated snippet in memory, and call `replaceSnippetContent` with the exact current content
    as `oldContent` and the complete intended content as `newContent`. Never replace an entire snippet
    with stale feedback payload content. If either guard rejects the write, re-read and reassess.
+   For missing knowledge, call `addSnippet` with `content`, a `topic` phrased as the customer's
+   question, and a `trigger` describing when it applies. Never use `addSnippet` to correct or
+   contradict an existing URL-sourced snippet: the added snippet does not retire with the source,
+   so it becomes a hidden override. Corrections to URL content follow the source path above.
+   A URL-sourced target document stores the new snippet in the KB's Knowledge Additions document;
+   the returned `document_id` shows where it landed. `403` means the KB is shared with an agent
+   outside your scope; `409` means the target text document is not `indexed` or the Knowledge
+   Additions document is in a conflicting state. Content is capped at 20,000 characters and
+   48,000 UTF-8 bytes.
 6. **Verify live read-back.** Fetch the edited snippet or feedback-created override and confirm the
    new rule appears exactly once, obsolete or conflicting wording is gone, and unrelated content
-   remains intact. After a URL source update, find the regenerated snippet by document and content
+   remains intact. `addSnippet` rewrites the content through an LLM before storing it: confirm
+   the stored text still says what you intended, and use that stored text (not what you sent) as
+   `oldContent` for any later `replaceSnippetContent`. Check `getAgentRoutingIndex` for the new
+   topic; the index rebuilds asynchronously. After a URL source update, find the regenerated snippet by document and content
    rather than reusing its old ID or index. This proves live configuration state, not end-to-end
    customer behavior.
 7. **Resolve the feedback.** The approval path is complete only when its issue reports `applied` and
@@ -251,16 +270,24 @@ Prompt changes have broader impact and require a stricter process.
    Include concrete triggers, required action, prohibited behavior, and tool-result semantics where
    relevant. Add an explicit override only when an uneditable base instruction conflicts. Do not
    bundle unrelated policy changes.
-5. **Choose and guard one mutation path.** Fetch the prompt again immediately before writing. If the
+5. **Choose and guard one mutation path.** Call `getAgentPrompt` immediately before writing. If the
    pending proposal still exactly matches the live prompt and independently verified intended fix,
-   call `approveFeedbackFix`. Otherwise preserve the entire live prompt, apply an exact, unique
-   anchor replacement in memory, and call `replaceAgentPrompt` with the complete freshly read prompt
-   as `expectedPrompt` and the complete updated prompt as `newPrompt`. Abort and reassess if the
-   anchor is absent, duplicated, or changed. Never write stale feedback `oldContent` or `newContent`
-   as the agent prompt. If either guard rejects the write, re-read and rebase the intended change.
-6. **Read back and verify.** Fetch the agent again. Confirm the new section appears exactly once, old
-   conflicting wording is absent, unrelated sections remain intact, formatting and length were not
-   corrupted, and assigned tools, model, and other agent settings are unchanged.
+   call `approveFeedbackFix`. Otherwise, for a narrow edit, call `patchAgentPrompt` with the `sha256`
+   you just read as `expectedPromptHash`, a short literal `oldText` copied exactly from the live
+   prompt that occurs once, and `newText` as the replacement for that fragment only (never the whole
+   prompt). One replacement per call; the server rejects stale hashes, missing or duplicate anchors,
+   edits over 4,096 bytes, and edits removing more than 25% of the prompt. Use `replaceAgentPrompt`
+   (complete freshly read prompt as `expectedPrompt`, complete updated prompt as `newPrompt`) only
+   for an explicitly authorized full rewrite. Never write stale feedback `oldContent` or `newContent`
+   as the agent prompt. On `409`, re-read and rebase the intended change. After a timeout or
+   ambiguous response, call `getAgentPrompt` before retrying; never replay the mutation blindly.
+6. **Read back and verify.** Call `getAgentPrompt` again. After `patchAgentPrompt`, confirm its
+   `sha256` equals the patch response's `after.sha256`. After `replaceAgentPrompt` or
+   `approveFeedbackFix`, confirm the returned `system_prompt` is exactly the prompt you intended
+   (for a replacement, identical to the `newPrompt` you sent). On every path, confirm the new section
+   appears exactly once, old conflicting wording is absent, unrelated sections remain intact, and
+   formatting and length were not corrupted. Use `getAgent` to confirm assigned tools, model, and
+   other settings are unchanged when relevant.
 7. **Validate expected behavior.** Walk through the reported scenario and important
    counterexamples. Check for premature handovers, unsupported promises, skipped verification, and
    incorrect tool use. Unless an approved non-production test was actually run, call this
@@ -324,18 +351,21 @@ is the prompt), or to copy a shared tool the agent already has. One integration 
 
 - Webhook hosts are governed by the agent's `allowed_domains` (the same list that controls where
   the chat widget may be embedded and which sites web search uses). Read it with `getAgent`. The
-  tool URL must be `https`, its host must equal an entry or be a subdomain of one, and it must also
-  be inside the platform's global webhook allowlist (getadelante.com, make.com, zapier.com).
-  Customer website entries such as `acme.example` never permit a webhook.
-- **No matching entry = you cannot create a tool or change a URL to that host.** Stop and ask the
-  user to have an Adelante admin add the exact webhook host (for example `hook.eu2.make.com`) to the
-  agent's allowed domains. Never try another agent, another URL form, or a redirecting URL to get
-  around it.
-- Hosts should be narrow. Make and Zapier hosts are shared by every Make/Zapier customer, so admins
-  add the specific regional host your account uses, not all of `make.com`. Anything added there
+  tool URL must be `https` and its host must equal or be a subdomain of an `allowed_domains` entry
+  or of the platform's global webhook allowlist (getadelante.com, make.com, zapier.com), so the
+  customer's own servers work once their domain is in `allowed_domains`. The host must resolve to
+  a public address, and removing the entry later stops every tool on that host.
+- **No matching entry = you cannot create a tool or change a URL to that host.** Add the exact
+  webhook host (for example `hook.eu2.make.com`) with `replaceAgentAllowedDomains` once the user
+  confirms it: send the complete list read from `getAgent` as `expectedDomains` and the complete new
+  list (every existing entry plus the host) as `newDomains`. A `409` means the list changed: re-read
+  and rebase. Never try another agent, another URL form, or a redirecting URL to get around it.
+- Hosts should be narrow. Make and Zapier hosts are shared by every Make/Zapier customer, so add
+  the specific regional host your account uses, never all of `make.com`. Anything added there
   also becomes a valid widget-embedding and web-search domain for the agent.
-- You can read `allowed_domains` but never change it. `updateAgent` is not available to analyst
-  keys.
+- Never drop existing entries unless the user asks: removing a domain also stops the widget from
+  loading on that site. `updateAgent` is not available to analyst keys; use only
+  `replaceAgentAllowedDomains`.
 
 ### Which tools you can manage
 
@@ -351,7 +381,7 @@ manageable after you detach it. There is no delete: detach instead.
 1. **Design.** Write down the actions, the parameters each needs, what the webhook returns, and what
    the bot must say for success, "not found", and failure. Confirm the receiving scenario exists and
    answers with JSON.
-2. **Check the allowlist.** `getAgent` → `allowed_domains` contains your host (or a parent of it). If not, stop.
+2. **Check the allowlist.** `getAgent` → `allowed_domains` contains your host (or a parent of it). If not, add it with `replaceAgentAllowedDomains` (with the user's confirmation) and re-read.
 3. **Create.** `createAgentWebhookTool`. The tool is created **inactive** and already attached, so
    the bot cannot call it yet.
 4. **Verify.** `getAgentWebhookTool`: check URL, method, header names (values are never shown), `parameters_schema`, `action_param`, `action_descriptions`, `is_active: false`,
@@ -490,7 +520,7 @@ creating anything.
 | Status | Meaning | What to do |
 |---|---|---|
 | `400` | Invalid body: bad name, missing field, forbidden field (`workflow_steps`, `webhook_authorization`, `tags`, `name` in an update, a non-webhook mode, `pre_conversation`, `general` scope), action enum and descriptions out of sync, or `__UNCHANGED__` for a header that is not stored as a secret | Fix the request; do not retry unchanged |
-| `403` | URL host not in the agent's `allowed_domains` or outside the global webhook allowlist, tool is shared/general or assigned to another agent, or your key lacks the `tools` component or analyst role | Stop. Ask for an admin allowlist change or a different tool; never work around it |
+| `403` | URL host in neither the agent's `allowed_domains` nor the global webhook allowlist, tool is shared/general or assigned to another agent, or your key lacks the `tools` component or analyst role | Stop. Add the host with `replaceAgentAllowedDomains`, or pick a different tool; never work around it |
 | `404` | Agent outside your scope, or the tool was not created for this agent with `createAgentWebhookTool` (admin-created tools) | Check the slug and tool ID; do not probe |
 | `409` | Tool name already exists | Choose a different, agent-prefixed name |
 
@@ -500,6 +530,11 @@ There is no `422` on these operations; validation problems return `400`.
 
 - `messages[]` — the transcript. `role` is `user` | `assistant` | `agent` (human agent);
   `source` (`ai` / `human_agent` / `system`) is the reliable who-sent-it label for analytics.
+- A transcript can contain several consecutive customer messages before an AI reply. Earlier
+  messages superseded before any AI or human-agent reply are returned with `isStale: true` and
+  `staleReason: "superseded_by_later_customer_message"`. Treat only the last non-stale customer
+  message in that group as the current message that triggered the reply. Stale messages remain
+  useful history/context; do not evaluate the same AI reply as a separate response to each of them.
 - Assistant messages may carry `thinking` (the model's internal reasoning — treat as diagnostic
   signal, never as customer-visible content) and `toolCalls` (name, args, result).
 - `toolUses[]` — session-level chronological tool call log. Wrong answers usually start here:
@@ -513,5 +548,5 @@ There is no `422` on these operations; validation problems return `400`.
 - When you recommend a fix, say where it belongs: system prompt, a specific tool's description,
   a specific KB chunk/topic, or platform configuration.
 - Never claim that submission changed production. Production changes only after a successful
-  `approveFeedbackFix`, `replaceSnippetContent`, `replaceAgentPrompt`, or agent webhook tool call
+  `approveFeedbackFix`, `replaceSnippetContent`, `addSnippet`, `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, or agent webhook tool call
   followed by live read-back verification.
