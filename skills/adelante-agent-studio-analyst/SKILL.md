@@ -24,7 +24,7 @@ Start safely with:
 
 Then use requests like these:
 
-- **Investigate one case:** “Investigate ticket 96728. Reconstruct what happened, inspect the prompt,
+- **Investigate one case:** “Investigate ticket `<ticket-number>`. Reconstruct what happened, inspect the prompt,
   retrieved KB snippets, and tool results, then identify the root cause. Do not make changes.”
 - **Fix a KB issue:** “Investigate this feedback issue and fix the KB if the policy is clear. Apply
   the smallest guarded change, verify live read-back, and close the feedback correctly. Ask me if
@@ -113,7 +113,7 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `getAgentPrompt` | Only the exact stored system prompt and its `sha256`; use this instead of `getAgent` when you only need the prompt |
 | `listConversations` | Conversation list for an agent, newest first (`limit`/`offset`; test sessions excluded unless `include_test=true`) |
 | `getConversation` | Full transcript: messages (with `thinking` on AI messages when enabled), `toolUses`, metadata |
-| `resolveTicketConversation` | Helpdesk ticket number (e.g. Zendesk `96728`) → its conversation |
+| `resolveTicketConversation` | Helpdesk ticket number → its conversation |
 | `listAgentTools` / `listTools` / `getTool` | Bound tool IDs, names, and parameter schemas; descriptions only for `agent_specific` tools |
 | `listAgentKnowledgeBases` / `listKnowledgeBases` / `getKnowledgeBase` | Knowledge bases linked to the agent |
 | `listDocuments` / `getDocument` / `listSnippets` | KB content the agent answers from |
