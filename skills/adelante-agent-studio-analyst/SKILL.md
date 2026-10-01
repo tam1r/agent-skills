@@ -67,6 +67,13 @@ an actual end-to-end test.
   discover them. The agent webhook tool operations show more (URL, method, header names, action
   copy, activation state) only for webhook tools you can manage, and never return secret header
   values.
+- Capability and permission claims need evidence. A field missing from a read response (a tool
+  description, a URL, a scope) does not establish that a tool is shared, admin-owned, or
+  uneditable. Before saying you cannot change something, find the operation that would edit it
+  (for a webhook tool: `listAgentWebhookTools` / `getAgentWebhookTool`, then
+  `updateAgentWebhookTool`) and read its contract in this skill. Report a permission blocker only
+  when that contract explicitly excludes the operation or an authorized call actually returned a
+  `403`/`404`, and cite which one.
 - Conversations contain real end-customer data. Don't paste full transcripts into external
   services, and quote only what the analysis needs.
 
@@ -146,8 +153,15 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 1. Ticket number → `resolveTicketConversation`. Session/conversation ID → `getConversation`.
 2. Read the transcript in order. For each AI message, check `thinking` (why it decided what it
    did) and its `toolCalls`/`toolUses` (what data it actually had).
-3. If the answer looks wrong, check the sources: `getAgent` (system prompt rules), the tool
-   result it relied on, and the KB chunk it likely used (`listSnippets`, `getAgentRoutingIndex`).
+3. If the answer looks wrong, check every source that governs the behavior before diagnosing:
+   `getAgent` (system prompt rules), the tool result it relied on, and the KB chunk it likely used
+   (`listSnippets`, `getAgentRoutingIndex`). When the behavior involves a tool (booking,
+   cancellation, order lookup, handover), also read that tool's description and the per-parameter
+   instructions in its `parameters_schema` (`getTool`, or `getAgentWebhookTool` for a tool you
+   manage); a rule often lives there rather than in the prompt or KB. If a source is unavailable
+   to your key (e.g. a shared tool's description), say which source remained unchecked and keep
+   the verdict conditional on it. Never conclude a rule does not exist from the sources you could
+   read alone.
 4. Verdict format: what the customer wanted → what the agent did → root cause (prompt rule /
    tool output / KB gap / model behavior) → recommended fix.
 
@@ -167,8 +181,9 @@ conversation via `conversation_id`/`ticket_id`, and flag recurring root causes.
 `listConversations` pagination `total`. Present revenue alongside resolution/handover stats.
 
 **Agent configuration review**:
-1. `getAgent` for the system prompt and settings; `listAgentTools` for tool descriptions;
-   `listAgentKnowledgeBases` + `listSnippets` for content.
+1. `getAgent` for the system prompt and settings; `listAgentTools` for tool descriptions and
+   parameter instructions; `listAgentKnowledgeBases` + `listSnippets` for content. List any tool
+   description you could not read as unchecked.
 2. Look for: contradictions between prompt and KB, tool descriptions that instruct escalation
    too eagerly, KB gaps for questions that appear often in conversations.
 
@@ -556,6 +571,9 @@ There is no `422` on these operations; validation problems return `400`.
 
 - Cite evidence: session IDs, message indexes, exact quotes for every claim.
 - Separate facts (what happened) from hypotheses (why) and label them.
+- Keep routine checks silent. Don't narrate lookups or announce that you are checking whether your
+  permissions allow something; do the work, then report the result, or a concrete blocker with
+  the call and error that produced it, in plain team language.
 - When you recommend a fix, say where it belongs: system prompt, a specific tool's description,
   a specific KB chunk/topic, or platform configuration.
 - Never claim that submission changed production. Production changes only after a successful
