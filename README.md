@@ -95,6 +95,42 @@ npx skills update -g adelante-agent-studio-analyst -y
 Installed copies are not updated automatically. Run this when Adelante announces a new version or
 add it to your coding-agent startup workflow.
 
+## Weekly CX operations review
+
+The `cx-operations-review` skill adds a read-only view of handover effort, CSAT,
+value and up to three automation priorities to the weekly digest. It covers
+bot-touched support and its human handovers in the existing team destination.
+It does not change the bot, create schedules or assess individual staff.
+
+**Release prerequisite:** this skill is not a standalone installation. Publish it
+only in a combined release containing the aligned `adelante-agent-studio-analyst`,
+`cx-weekly-digest`, `cx-fix-loop` and `cx-operations-review` skills. Merge the
+[analyst alignment](https://github.com/tam1r/agent-skills/pull/3), then the
+[CX lead workflow](https://github.com/tam1r/agent-skills/pull/4), then this operations
+review before publishing that release. Installing from a branch with only the
+operations-review file cannot produce a report: it stops when prerequisites are
+missing or incompatible.
+
+After all four skills are available on `main`, install them together in the same
+agent environment:
+
+```bash
+npx skills add tam1r/agent-skills --skill adelante-agent-studio-analyst -g -y
+npx skills add tam1r/agent-skills --skill cx-weekly-digest -g -y
+npx skills add tam1r/agent-skills --skill cx-fix-loop -g -y
+npx skills add tam1r/agent-skills --skill cx-operations-review -g -y
+```
+
+Then ask:
+
+> Prepare a read-only weekly operations review for my assigned support agent.
+> Include handover effort, CSAT and the top three evidence-backed priorities.
+> Do not change anything or create a schedule.
+
+Managed FDE runtimes receive these skills through a reviewed, pinned release and
+an authorized FDE deployment; these global installation commands do not update
+customer runtimes. A source release alone does not activate recurring reports.
+
 ## Want an AI support agent for your business?
 
 [Adelante](https://www.getadelante.com/) builds, launches, and continuously improves AI support
