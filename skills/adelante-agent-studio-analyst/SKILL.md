@@ -53,7 +53,7 @@ an actual end-to-end test.
 - Your API key is scoped to specific agent(s). Anything outside that scope returns **404 or 403 —
   this is expected**, not an error to work around. Never try to enumerate or access other agents.
 - Viewer keys are read-only. Analyst keys can submit and approve feedback, can use the dedicated
-  `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, `replaceSnippetContent`, and `addSnippet` remediation operations, and can build webhook
+  `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, `replaceSnippetContent`, `addSnippet`, and `createDocument` (text only) remediation operations, and can build webhook
   tools through the agent webhook tool operations (see "Building webhook tools") when their
   component and agent scopes permit it. Broader agent, tool, document, and knowledge-base writes
   remain forbidden, and a tool whose scope is not `agent_specific` can never be updated,
@@ -119,6 +119,7 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `resolveFeedbackIssue` | Analyst only: marks a scoped escalated/failed issue as applied after a manual fix, with a required note describing what changed |
 | `replaceSnippetContent` | Analyst only: guarded replacement of one scoped internal snippet, optionally with its routing `topic`/`trigger`; URL snippets return their source URL |
 | `addSnippet` | Analyst only: adds one snippet (`content`, `topic`, optional `trigger`) to a document in a KB used only by your agents; a URL-sourced target lands in the KB's Knowledge Additions document; content is LLM-refined, so read it back |
+| `createDocument` | Analyst only: creates a `text` document (`source_type: "text"`, `title`, `content`, optional `idempotency_key`) in a KB used only by your agents; ingestion splits it into snippets asynchronously |
 | `patchAgentPrompt` | Analyst only: replaces one unique literal fragment of a scoped agent's prompt (`expectedPromptHash`, `oldText`, `newText`); the server builds the new prompt |
 | `replaceAgentPrompt` | Analyst only: guarded replacement of one scoped agent's complete prompt, for explicitly authorized full rewrites |
 | `replaceAgentAllowedDomains` | Analyst only: guarded replacement of one scoped agent's complete `allowed_domains` list (`expectedDomains` from `getAgent`, `newDomains` bare hostnames); also governs webhook hosts |
@@ -221,6 +222,16 @@ Use this process for every proposed KB change.
    narrow updated snippet in memory, and call `replaceSnippetContent` with the exact current content
    as `oldContent` and the complete intended content as `newContent`. Never replace an entire snippet
    with stale feedback payload content. If either guard rejects the write, re-read and reassess.
+   For a missing topic that needs several related snippets (a new policy, a new product line),
+   create one `text` document with `createDocument` instead of many `addSnippet` calls: give it a
+   clear `title`, well-structured `content` (at most 100,000 characters and 256,000 UTF-8 bytes),
+   and an `idempotency_key` so a retry after a timeout does not create a duplicate. Never put URL
+   content into a text document to work around a URL source; update the source instead. Ingestion
+   is asynchronous: poll `getDocument` until `status` is `indexed` (or `failed`), then read the
+   generated snippets with `listSnippets` and check their topics in `getAgentRoutingIndex`. You
+   cannot edit a document's `content` afterwards; correct its snippets with `replaceSnippetContent`,
+   and tell the user those edits are lost if an administrator later re-indexes the document, since
+   re-indexing rebuilds the snippets from the original `content`.
    For missing knowledge, call `addSnippet` with `content`, a `topic` phrased as the customer's
    question, and a `trigger` describing when it applies. Never use `addSnippet` to correct or
    contradict an existing URL-sourced snippet: the added snippet does not retire with the source,
@@ -548,5 +559,5 @@ There is no `422` on these operations; validation problems return `400`.
 - When you recommend a fix, say where it belongs: system prompt, a specific tool's description,
   a specific KB chunk/topic, or platform configuration.
 - Never claim that submission changed production. Production changes only after a successful
-  `approveFeedbackFix`, `replaceSnippetContent`, `addSnippet`, `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, or agent webhook tool call
+  `approveFeedbackFix`, `replaceSnippetContent`, `addSnippet`, `createDocument`, `patchAgentPrompt`, `replaceAgentPrompt`, `replaceAgentAllowedDomains`, or agent webhook tool call
   followed by live read-back verification.
