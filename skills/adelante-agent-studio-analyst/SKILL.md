@@ -182,7 +182,8 @@ an actual access denial remains a boundary and must not be bypassed.
    labels or notes the result does not include. If retrieval is unavailable, denied,
    unsupported or fails, state the unverified portion and keep conclusions conditional;
    missing returned data does not prove that information was never stored. Escalate unresolved
-   technical issues to Tamir. For sampled reviews, read both sources for each reviewed case,
+   failures of supported, configured reads to Tamir; expected unsupported-provider or permission
+   limits are evidence limitations, not incidents. For sampled reviews, read both sources for each reviewed case,
    not every unreviewed list entry.
 3. If the answer looks wrong, check every source that governs the behavior before diagnosing:
    `getAgent` (system prompt rules), the tool result it relied on, and the KB chunk it likely used
