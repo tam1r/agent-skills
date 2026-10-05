@@ -139,11 +139,11 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 ## Discovering capabilities missing from this skill
 
 This table is a guide, not the complete live MCP catalog. Before claiming a needed capability
-is unavailable, inspect the connected server's current `tools/list` catalog and the relevant input
-schema. Follow `nextCursor` pagination when present. Use the protocol operation when your client
-exposes it; do not invent a callable tool named `tools/list` when it does not.
-If tools are deferred in Hermes and direct catalog access is not exposed, use `tool_search` with the exact operation name or capability
-keywords, then `tool_describe` on the exact returned names before invoking them with `tool_call`.
+is unavailable, discover the currently available tools and inspect the relevant input schema.
+In Hermes, use `tool_search` with the exact operation name or capability keywords, then
+`tool_describe` on the exact returned names, then `tool_call` with schema-matching arguments.
+Use these exposed Hermes tools; do not invent a callable tool named `tools/list`. The MCP
+protocol's `tools/list` method is the underlying catalog operation, not an analyst business tool.
 For helpdesk history, search for `getOperatorThread` or "helpdesk operator thread". If one search
 has no matches, try a capability-based query using the returned source hints; a lexical miss
 does not establish that no tool exists. Other clients should use their exposed MCP discovery
