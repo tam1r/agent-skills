@@ -112,8 +112,9 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `getAgent` | Full agent config: system prompt, model, temperature, thinking settings, bound tools |
 | `getAgentPrompt` | Only the exact stored system prompt and its `sha256`; use this instead of `getAgent` when you only need the prompt |
 | `listConversations` | Conversation list for an agent, newest first (`limit`/`offset`; test sessions excluded unless `include_test=true`) |
-| `getConversation` | Full transcript: messages (with `thinking` on AI messages when enabled), `toolUses`, metadata |
-| `resolveTicketConversation` | Helpdesk ticket number → its conversation |
+| `getConversation` | Stored AI-runtime transcript: messages (with `thinking` on AI messages when enabled), `toolUses`, metadata; not necessarily the complete helpdesk conversation |
+| `getOperatorThread` | Helpdesk continuation for the same `slug` and `sessionId`, including customer follow-ups and human replies; returns `source`, `transcript`, and structured `messages` for live reads |
+| `resolveTicketConversation` | Zendesk ticket number → its conversation; not a resolver for arbitrary helpdesk links or Crisp IDs |
 | `listAgentTools` / `listTools` / `getTool` | Bound tool IDs, names, and parameter schemas; descriptions only for `agent_specific` tools |
 | `listAgentKnowledgeBases` / `listKnowledgeBases` / `getKnowledgeBase` | Knowledge bases linked to the agent |
 | `listDocuments` / `getDocument` / `listSnippets` | KB content the agent answers from |
@@ -135,6 +136,23 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `updateAgentWebhookTool` | Analyst only: edits a manageable webhook tool; `is_active: true/false` activates or deactivates it |
 | `attachAgentWebhookTool` / `detachAgentWebhookTool` | Analyst only: attaches or detaches a manageable webhook tool; never deletes it |
 
+## Discovering capabilities missing from this skill
+
+This table is a guide, not the complete live MCP catalog. Before claiming a needed capability
+is unavailable, discover the currently available tools and inspect the relevant input schema.
+In Hermes, use `tool_search` with the exact operation name or capability keywords, then
+`tool_describe` on the exact returned names, then `tool_call` with schema-matching arguments.
+Use these exposed Hermes tools; do not invent a callable tool named `tools/list`. The MCP
+protocol's `tools/list` method is the underlying catalog operation, not an analyst business tool.
+For helpdesk history, search for `getOperatorThread` or "helpdesk operator thread". If one search
+has no matches, try a capability-based query using the returned source hints; a lexical miss
+does not establish that no tool exists. Other clients should use their exposed MCP discovery
+mechanism. Do not invent names, arguments, endpoints, permissions or provider support.
+
+Agent Studio's `listTools` lists the support bot's assigned business tools. It is not the
+analyst MCP catalog. A tool omitted from this document may still be available to your key;
+an actual access denial remains a boundary and must not be bypassed.
+
 ## Reading responses
 
 - Every response is wrapped: `{ "success": true, "data": ... }`; errors are
@@ -150,9 +168,23 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 ## How to investigate
 
 **A single ticket/conversation** — start from the identifier you were given:
-1. Ticket number → `resolveTicketConversation`. Session/conversation ID → `getConversation`.
-2. Read the transcript in order. For each AI message, check `thinking` (why it decided what it
-   did) and its `toolCalls`/`toolUses` (what data it actually had).
+1. Zendesk ticket number → `resolveTicketConversation`. Session/conversation ID, including the
+   `session_...` identifier in a Crisp link → `getConversation`.
+2. For every reviewed conversation, also call `getOperatorThread` with the same authorized
+   `slug` and `sessionId` before reaching a conclusion. Do not wait for a reported handover
+   or stop at the last stored AI reply. Read both records in time order: use the AI trace for
+   `thinking` and `toolCalls`/`toolUses`, and the operator thread for later customer messages,
+   human replies and any returned notes. An absent handover tool call does not rule out a
+   helpdesk automation or exclusion rule transferring the conversation.
+   Check `source`: `helpdesk` is a direct provider read; `cached` may be stale and may have
+   `messages: null`. Crisp history is limited to the latest 120 messages; other supported
+   providers retain their documented history limits. Gorgias returns 501. Do not infer
+   labels or notes the result does not include. If retrieval is unavailable, denied,
+   unsupported or fails, state the unverified portion and keep conclusions conditional;
+   missing returned data does not prove that information was never stored. Escalate unresolved
+   failures of supported, configured reads to Tamir; expected unsupported-provider or permission
+   limits are evidence limitations, not incidents. For sampled reviews, read both sources for each reviewed case,
+   not every unreviewed list entry.
 3. If the answer looks wrong, check every source that governs the behavior before diagnosing:
    `getAgent` (system prompt rules), the tool result it relied on, and the KB chunk it likely used
    (`listSnippets`, `getAgentRoutingIndex`). When the behavior involves a tool (booking,
@@ -167,8 +199,10 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 
 **Aggregate analysis** (handover rate, common intents, failure patterns):
 1. `listConversations` over the period (test sessions are already excluded by default).
-2. Classify each conversation from its transcript and `toolUses` (e.g. a handover tool call =
-   escalated; no reply needed = resolved). State your classification rules in the output.
+2. Read `getConversation` and `getOperatorThread` for each reviewed conversation. Classify
+   from both records and `toolUses`; a handover tool call is evidence of an attempted handover,
+   while helpdesk evidence may show a transfer outside the AI turn. Its absence alone does not
+   establish resolution. State your classification rules and any unverified outcomes.
 3. Transcripts are large — fetch details one at a time, and if the period has hundreds of
    conversations, analyze a sample and say so (e.g. "50 most recent of 412").
 4. Report counts **and** representative examples (session IDs) so findings are verifiable.
