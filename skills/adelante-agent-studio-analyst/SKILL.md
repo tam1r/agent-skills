@@ -279,6 +279,9 @@ Use this process for every proposed KB change.
    with `listSnippets` and its routing entry disappears from `getAgentRoutingIndex` after the
    asynchronous rebuild. Deletion leaves the original document content unchanged, so a later
    administrator reindex can recreate it. Do not delete URL-source snippets or whole documents.
+   If deletion resolves a pending feedback issue, after successful read-back call
+   `dismissFeedbackIssue` with a concrete reason identifying the approved deletion. Never approve
+   the now-obsolete overlapping proposal. If verification fails, leave the issue open and report it.
    For a missing topic that needs several related snippets (a new policy, a new product line),
    create one `text` document with `createDocument` instead of many `addSnippet` calls: give it a
    clear `title`, well-structured `content` (at most 100,000 characters and 256,000 UTF-8 bytes),
