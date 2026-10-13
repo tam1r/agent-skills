@@ -49,6 +49,26 @@ live configuration again to make sure the change stuck.
 | Audit your agent | Finds contradictions across prompt, knowledge, and available assigned-tool contracts |
 | Report outcomes | Analyzes support volume, handovers, resolution patterns, and attributed revenue |
 
+## CX Review Loop
+
+The `cx-review-loop` skill runs the recurring improvement routine for one support agent in your
+team's chat. It builds on the Analyst skill.
+
+| Routine | What it does |
+|---|---|
+| Weekly handover review | Reads last week's bot handovers and what your team did next, groups them into themes with counts, and proposes the wording changes that would let the bot handle them |
+| Daily feedback follow-up | Lists the feedback items still open and asks what to do with each |
+
+Every proposal shows the exact text that would change. Nothing is applied until someone in the
+team chat approves it, and each applied change is read back and confirmed.
+
+```bash
+npx skills add tam1r/agent-skills \
+  --skill adelante-agent-studio-analyst \
+  --skill cx-review-loop \
+  -g -y
+```
+
 ## Install
 
 Install the skill globally and let the Skills CLI detect your coding agents:
