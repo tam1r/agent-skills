@@ -1,6 +1,6 @@
 ---
 name: cx-review-loop
-description: Run the recurring improvement loop for an assigned Agent Studio support agent in the team's chat - a weekly review of the bot's handovers and a daily follow-up on open feedback. Propose each change with its exact text, apply it only after someone in the team chat approves, then confirm it landed. Use for a scheduled weekly review, a scheduled daily feedback follow-up, or when the team replies to one of those messages.
+description: Run the recurring improvement loop for an assigned Agent Studio support agent in the team's chat - a weekly review of the bot's handovers and a daily follow-up on open feedback. Propose each change with its exact text, apply it only after someone in the team chat approves, then confirm it landed. Use for a scheduled weekly review, a scheduled daily feedback follow-up, when the team asks for a summary of what the bot hands over, or when the team replies to one of those messages.
 ---
 
 # CX review loop
@@ -32,7 +32,8 @@ You propose. The team decides in the chat. You apply only what they approved.
 1. Call `listHandovers` for the last 7 complete days. Page until you have every
    row. If there are more than 150, take the newest 150 and say so in the report.
 2. For each handover read `getOperatorThread` to see what the human did after the
-   bot handed over. When the human side is unavailable for a conversation, count
+   bot handed over. Group by what the human did, and use the bot's handover
+   reason only as a hint. When the human side is unavailable for a conversation, count
    it as "no human reply available" and leave it out of the conclusions.
 3. Sort every handover into one of three kinds, from the human's reply:
    - **Reply only**: the human answered with information the bot had or could have had.
@@ -47,6 +48,8 @@ You propose. The team decides in the chat. You apply only what they approved.
    - **Tool gap**: the bot lacks an action or a piece of data.
    - **Team decision**: the bot would be doing something it does not do today,
      or the team's replies differ from the written policy.
+   - **Bot error**: a tool call failed or returned something wrong. List the
+     ticket IDs for Adelante; the team does not need to decide anything.
 6. Check last week's applied changes: for each one, did the same theme come back
    this week? Report it in one line per change.
 7. Send one message (see "Message format"): the week's handover count and rate,
@@ -80,8 +83,11 @@ week.
 - Number every proposal and question in the message and write the same numbers
   in the review log.
 - Tool gaps and team decisions are questions, not changes. Ask them in the same
-  message and record the answer. Tell the team when something needs Adelante to
-  build or apply it.
+  message and record the answer. With each question give your recommendation and
+  the reason for it, so the team can answer with a yes.
+- A tool gap is built by Adelante. Start a coding task for it once someone from
+  Adelante approves it in the chat and the team has made the decisions it depends
+  on, and tell the chat it will come back as a PR for review.
 
 **Approve**
 
