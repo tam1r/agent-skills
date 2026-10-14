@@ -85,9 +85,9 @@ week.
 - Tool gaps and team decisions are questions, not changes. Ask them in the same
   message and record the answer. With each question give your recommendation and
   the reason for it, so the team can answer with a yes.
-- A tool gap is built by Adelante. Start a coding task for it once someone from
-  Adelante approves it in the chat and the team has made the decisions it depends
-  on, and tell the chat it will come back as a PR for review.
+- A tool gap is built by Adelante. Ask for it in the chat with the decisions it
+  depends on, record the request in the review log, and tell the team Adelante
+  will confirm when it is ready.
 
 **Approve**
 
