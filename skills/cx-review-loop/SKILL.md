@@ -20,7 +20,7 @@ You propose. The team decides in the chat. You apply only what they approved.
 
 - Use the installed `adelante-agent-studio-analyst` skill for the Agent Studio MCP
   tools and for how to read conversations, prompts and knowledge. Discover the
-  live tool list first. This skill uses `getConversationAnalytics`,
+  live tool list first. This skill uses `getConversationAnalytics`, `getAgentStats`,
   `listHandovers`, `getConversation`, `getOperatorThread`, `getAgentPrompt`,
   `listSnippets`, `getTool`, `listFeedbackIssues`, `submitFeedback`,
   `approveFeedbackFix` and `dismissFeedbackIssue`. If one is missing or returns
@@ -117,8 +117,20 @@ right. Report one line per change: held, partly, not seen yet, or worse.
 
 ### 6. Send one message
 
-See "Message format": the rate line, the top themes with counts, the applied-change
-check, then the numbered proposals and questions.
+See "Message format": the rate line, the health lines, the top themes with counts, the
+applied-change check, then the numbered proposals and questions.
+
+The health lines, each against the previous 4 weeks:
+
+- Satisfaction (CSAT where collected) and time from handover to the first human reply,
+  from the operator threads you read.
+- Any contact reason or handover theme that rose by more than half, with its count.
+- Incidents: tool failures (`getAgentStats`), outages, carrier or website problems seen
+  in conversations.
+- One thing to watch before next week.
+
+If nothing moved, say so in one line. Record the health lines in the review log; the
+monthly director review reads them.
 
 A handover in `listHandovers` is a conversation where the bot called its handover
 tool. Human takeovers and system-triggered handovers are not in it, so the count
@@ -197,7 +209,7 @@ again. Keep customer personal data out of it; use session IDs.
 - One message per run. Short lines, numbered items, no tables.
 - First line: "Last week: N bot handovers in M conversations, X% automated
   (4-week average Y%)."
-- Then the one or two things that need an answer today.
+- Then the health lines, then the one or two things that need an answer today.
 - Every count carries its period ("12 bot handovers last week").
 - Weekly: at most six proposals or questions. Daily: at most six items.
 - Say when a number is partial (capped at 150, human replies unavailable,

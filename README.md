@@ -56,7 +56,7 @@ team's chat. It builds on the Analyst skill.
 
 | Routine | What it does |
 |---|---|
-| Weekly handover review | Compares last week's automation rate with the four weeks before, reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
+| Weekly handover review | Compares last week's automation rate with the four weeks before, adds health lines (satisfaction, time to a person, spikes, incidents), reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
 | Daily feedback follow-up | Lists the feedback items still open and asks what to do with each |
 
 Every proposal shows the exact text that would change. Nothing is applied until someone in the
@@ -72,11 +72,11 @@ npx skills add tam1r/agent-skills \
 ## CX Director Review
 
 The `cx-director-review` skill prepares the decision brief for whoever runs customer
-experience. It builds on the Analyst skill and reads the CX Review Loop's log.
+experience. It builds on the Analyst skill and reads the CX Review Loop's log, including its
+weekly health lines.
 
 | Cadence | What it does |
 |---|---|
-| Weekly health pulse | Five lines: volume, real resolution, satisfaction, time to a person, spikes and incidents |
 | Monthly review | Scorecard, voice of the customer, top recommendations, policy recommendations with pilots, prevent / automate / keep human per contact reason, asks for each owning team, quality, knowledge health, revenue, goodwill, readiness for upcoming changes, risks, and last month's decisions |
 | Quarterly review | Targets, capacity and staffing, segments compared, cost and value of support, and a one-page executive summary |
 

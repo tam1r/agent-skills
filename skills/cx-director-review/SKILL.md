@@ -1,6 +1,6 @@
 ---
 name: cx-director-review
-description: Prepare the CX director's decision brief for a business that runs an Agent Studio support agent - a weekly health pulse, a monthly review and a quarterly review that turn support conversations into company-wide recommendations on policy, product, website, operations, marketing, revenue and how support itself runs. Recommends only; never changes the agent or any setting. Use for a scheduled weekly, monthly or quarterly CX review, when leadership asks why customers contact support or what support costs and earns, or when someone replies to one of these reviews.
+description: Prepare the CX director's decision brief for a business that runs an Agent Studio support agent - a monthly review and a quarterly review that turn support conversations into company-wide recommendations on policy, product, website, operations, marketing, revenue and how support itself runs. Recommends only; never changes the agent or any setting. Use for a scheduled monthly or quarterly CX review, when leadership asks why customers contact support or what support costs and earns, or when someone replies to one of these reviews.
 ---
 
 # CX director review
@@ -99,23 +99,12 @@ ask for it once in the summary message and record the answer in the note.
 
 ## Before each run
 
-1. Read the decision log (see "Decision log") and the `cx-review-loop` log.
+1. Read the decision log (see "Decision log") and the `cx-review-loop` log, including its
+   weekly health lines for the period.
 2. Use the stable list of contact reasons from the decision log. On the first run, build
    it from the analytics classifications and a read of 30 to 50 conversations, keep it
    to about 12 reasons, and record it. Change it only with a recorded reason, so trends
    stay comparable.
-
-## Weekly health pulse
-
-Five lines in the team chat, no document:
-
-1. Contacts, bot-handled share and real resolution, against the previous 4 weeks.
-2. Satisfaction and time to a person.
-3. Any contact reason that rose more than half against its 4-week average, with count.
-4. Incidents: tool failures, outages, carrier or website problems seen in conversations.
-5. One thing to watch before next week.
-
-Send nothing beyond the five lines. If nothing moved, say so in one line.
 
 ## Monthly review
 
@@ -259,7 +248,6 @@ of it.
 
 When the administrator asks for it and the runtime has a scheduler:
 
-- Weekly pulse: one fixed weekday morning in the team's timezone.
 - Monthly review: the first working day of the month.
 - Quarterly review: the first working day of the quarter, in place of that month's review.
 - Each job loads `adelante-agent-studio-analyst` and `cx-director-review`, delivers to the
