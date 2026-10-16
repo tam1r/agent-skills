@@ -68,19 +68,19 @@ Use these definitions every time, so months compare.
 | Metric | Definition |
 |---|---|
 | Contacts | Conversations started in the period (`getConversationAnalytics`) |
-| Contact rate | Contacts per 100 orders in the same period |
+| Contact rate | Contacts per 100 orders in the same period; orders from `getStoreMetrics` |
 | Bot-handled | Conversations with no handover |
-| Real resolution | Bot-handled, the customer did not leave mid-conversation (the last message is not an unanswered question from the bot), and the same customer did not contact again about the same issue within 7 days. Measured on a sample; say its size. Match the customer by the masked identity token their conversations share; when no token is available, report real resolution as not measurable |
+| Real resolution | Bot-handled, the customer did not leave mid-conversation (the last message is not an unanswered question from the bot), and the customer did not contact again within 7 days. Take repeat contacts from analytics; check abandonment on the sample you read and say its size |
 | One-touch | Solved by the bot with exactly one bot reply and no handover (`oneTouch` / `oneTouchRate` in analytics). A measured lower bound for effortless resolution |
 | Sentiment | Positive, neutral or negative per conversation (`sentiments` in analytics): the handover's sentiment for handovers, the classification's otherwise. Conversations without one are not counted |
-| Repeat contact rate | Share of contacts from a customer who contacted about the same issue in the previous 7 days |
-| Time to a person | From the handover to the first human reply, from operator threads |
+| Repeat contact rate | `repeatContactRate` in analytics: conversations whose customer (matched by phone or email) contacted the same agent in the previous 7 days. Conversations without an identifier are excluded (`repeatContactsExcluded`); say how many, because some channels carry none |
+| Time to a person | `firstHumanReply` in analytics: median and slowest 10% from the first completed handover to the first human reply, with the number measured. Reported by the helpdesk for Zendesk and Crisp; other helpdesks show nothing measured |
 | Customer effort | One-touch rate, messages to resolution, repeat contacts, channel switches, requests for a person |
 | Satisfaction | CSAT from analytics where collected; otherwise say it is not collected |
 | Cost to serve | Human-handled contacts × minutes per contact (default 4) × hourly cost, plus tool cost when known |
 | Refund and compensation cost | Refunds, credits, coupons and free reshipments given because something went wrong, from the store or the operator threads |
-| Return rate | Returned orders per 100 orders, with the reasons customers gave |
-| Repeat purchase after contact | Share of customers who contacted support and ordered again within 90 days, against those who did not contact. Needs store data |
+| Return rate | Orders with a return per 100 orders, with return reasons (`getStoreMetrics`, Shopify only) |
+| Repeat buyers | Customers with more than one order in the window, out of customers with an order (`getStoreMetrics`). Repeat purchase after a support contact is not measured yet; say so rather than estimate it |
 
 ## Inputs
 
@@ -94,6 +94,15 @@ Read these from Agent Studio:
   `kind=sentiment&value=negative` as the main way into frustration, and `one_touch`,
   `handed_over`, `classification` or `month` for the rest.
 - `getAgentStats`: tool calls and failures for the period.
+- Analytics also returns `repeatContactRate`, `firstHumanReply`, and contacts by weekday
+  and hour (`byHour`, with a `timezone` parameter) for capacity.
+- `getStoreMetrics` (window up to 92 days): orders, revenue, refunds, cancellations,
+  returns with reasons, repeat buyers and carriers with delivery times, from the store the
+  agent is connected to. Fields the store cannot supply are null, and `notes` says why
+  (WooCommerce records no returns or carriers; missing store permissions; windows older
+  than 60 days without full order history). Report those notes; do not fill the gaps.
+- `getOrderActionAnalytics`: order actions the agent executed (address edits,
+  cancellations, holds and others), as evidence for what is already automated.
 - `listHandovers`, `listConversations`, `getConversation`, `getOperatorThread`: the
   conversations behind each theme, bot and human side.
 - `getAttributedRevenue`: revenue from conversations.
@@ -105,15 +114,14 @@ Read these from Agent Studio:
 Read the business inputs from the agent note "CX director inputs" (`listAgentNotes`,
 `getAgentNote`):
 
-- Order volume per month, if no store-metrics tool is available.
 - Cost per human contact, or the country hourly rate and minutes per contact.
+- Order volume per month, only when `getStoreMetrics` returns no order count.
 - Opening hours and team size.
 - Targets for the quarter. Without stated targets, the target is to beat the average of
   the previous three months.
 - Known upcoming sales, launches and policy changes.
 
-If a store-metrics tool exists in your live tool list, take order volume, refunds,
-returns, cancellations, repeat purchases and carrier data from it instead. Where a public
+Where a public
 review source is readable (Trustpilot, Google, app store or marketplace reviews), read its
 themes for the month as a second voice next to support conversations. When an input is missing,
 ask for it once in the summary message and record the answer in the note.
@@ -172,7 +180,7 @@ section with nothing material this month gets one line saying so, not filler.
    most needed.
 2. **Scorecard.** Contact rate, contacts, one-touch rate, real resolution, repeat contact
    rate, share of negative sentiment, satisfaction, effort, time to a person, cost to serve, refund and compensation cost,
-   return rate, repeat purchase after contact, revenue from conversations, and public
+   return rate, repeat buyers, revenue from conversations, and public
    review rating where readable. Each against last month, the three-month trend and the
    target. Mark each number measured or estimated. Separate leading indicators (repeat
    contacts, effort, time to a person) from lagging ones (satisfaction, retention), so a
@@ -210,7 +218,8 @@ section with nothing material this month gets one line saying so, not filler.
      changed mind. Each points to a product page, sizing guide or quality fix.
    - **Customer data problems** seen in conversations: missing or wrong contact details,
      duplicate accounts, order records that disagree with what the customer received.
-   - **Partner performance**: contacts caused by each carrier, payment provider, supplier,
+   - **Partner performance**: delivery times per carrier from `getStoreMetrics`, contacts
+     caused by each carrier, payment provider, supplier,
      marketplace or outsourced support team, against what was agreed with them.
 8. **Quality.** Score a sample every month, 10 bot-handled and 10 handed-over
    conversations, for correctness against the knowledge and tool results, policy
@@ -224,14 +233,14 @@ section with nothing material this month gets one line saying so, not filler.
 9. **Knowledge health.** Facts the team keeps giving by hand that the knowledge lacks,
    entries that contradict each other or the prompt, and dated facts (old prices, ended
    promotions). Hand bot-level fixes to `cx-review-loop`; report the pattern here.
-10. **Escalations and incidents.** Time to a person by weekday and hour against opening
-    hours, customers left waiting, whether handover summaries let staff act without
+10. **Escalations and incidents.** Time to a person (`firstHumanReply`) and handovers by
+    weekday and hour (`byHour`) against opening hours, customers left waiting, whether handover summaries let staff act without
     asking again. Each outage or failure: duration, contacts affected, how customers
     were told, what prevents a repeat.
 11. **Revenue and retention.** Judge support by the revenue it keeps and creates, not
     only the contacts it deflects:
-    - **Retention**: repeat purchase after contact, split by whether the problem was
-      solved and how long it took; customers asking to cancel an order or subscription,
+    - **Retention**: repeat buyers from the store, repeat contacts from analytics, and
+      customers asking to cancel an order or subscription,
       and what kept the ones who stayed; high-value or repeat customers who had a bad
       experience, listed for outreach by their owner.
     - **Revenue from conversations**: attributed revenue, pre-sale questions that end
@@ -263,7 +272,8 @@ section with nothing material this month gets one line saying so, not filler.
 The monthly document for the quarter, plus:
 
 - Targets for next quarter, proposed from the trend.
-- Capacity: contacts by weekday and hour, forecast human-handled volume including sales
+- Capacity: contacts by weekday and hour (`byHour` in the team's timezone) against opening
+  hours and time to a person, forecast human-handled volume including sales
   and holidays, and the staffing hours it needs.
 - Brands, languages or segments compared, where the business runs more than one agent,
   with a standard for the weaker one.
