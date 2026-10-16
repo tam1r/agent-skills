@@ -67,6 +67,9 @@ Use these definitions every time, so months compare.
 | Customer effort | Messages to resolution, repeat contacts, channel switches, requests for a person |
 | Satisfaction | CSAT from analytics where collected; otherwise say it is not collected |
 | Cost to serve | Human-handled contacts × minutes per contact (default 4) × hourly cost, plus tool cost when known |
+| Refund and compensation cost | Refunds, credits, coupons and free reshipments given because something went wrong, from the store or the operator threads |
+| Return rate | Returned orders per 100 orders, with the reasons customers gave |
+| Repeat purchase after contact | Share of customers who contacted support and ordered again within 90 days, against those who did not contact. Needs store data |
 
 ## Inputs
 
@@ -94,7 +97,9 @@ Read the business inputs from the agent note "CX director inputs" (`listAgentNot
 - Known upcoming sales, launches and policy changes.
 
 If a store-metrics tool exists in your live tool list, take order volume, refunds,
-returns, cancellations and carrier data from it instead. When an input is missing,
+returns, cancellations, repeat purchases and carrier data from it instead. Where a public
+review source is readable (Trustpilot, Google, app store or marketplace reviews), read its
+themes for the month as a second voice next to support conversations. When an input is missing,
 ask for it once in the summary message and record the answer in the note.
 
 ## Before each run
@@ -118,7 +123,8 @@ ask for it once in the summary message and record the answer in the note.
    - **Confusion**: the information was unclear or contradictory.
    - **Policy**: a rule blocked them.
 3. **Name the owning team** for each theme: product, website, operations, marketing,
-   finance, or support.
+   finance, support, or an outside partner (carrier, payment provider, supplier,
+   marketplace, outsourced support team).
 4. **Read the conversations** behind each large theme, both sides. Note what customers
    said and what the human team actually did. Sample and state the count.
 5. **Compare practice with policy.** Where the team grants exceptions, where the site,
@@ -144,14 +150,18 @@ ask for it once in the summary message and record the answer in the note.
 1. **Headline.** Three sentences: how the month went, the biggest problem, the decision
    most needed.
 2. **Scorecard.** Contact rate, contacts, real resolution, repeat contact rate,
-   satisfaction, effort, time to a person, cost to serve, revenue from conversations.
-   Each against last month, the three-month trend and the target. Mark each number
-   measured or estimated.
+   satisfaction, effort, time to a person, cost to serve, refund and compensation cost,
+   return rate, repeat purchase after contact, revenue from conversations, and public
+   review rating where readable. Each against last month, the three-month trend and the
+   target. Mark each number measured or estimated. Separate leading indicators (repeat
+   contacts, effort, time to a person) from lagging ones (satisfaction, retention), so a
+   problem shows before it reaches the lagging numbers.
 3. **Voice of the customer.** The 5 to 7 biggest themes in customers' words, with volume
    and trend. Where they get frustrated and where they work hardest. What they praise.
    What they ask for that does not exist. Which journey stage causes most contacts
    (before purchase, checkout, delivery, first use, return, repeat purchase). What
-   changed since last month. How customers react to the bot.
+   changed since last month. How customers react to the bot. Where public reviews are
+   readable, say which themes appear there and not in support, and the reverse.
 4. **Top five recommendations** across the company, ranked by impact.
 5. **Policy recommendations.** Refunds, exchanges, fees, cancellations, warranty,
    compensation, and what staff and the agent may grant without asking. Judge each
@@ -171,11 +181,22 @@ ask for it once in the summary message and record the answer in the note.
    information the agent had, against judgment work.
 7. **Asks by owning team.** For each team: the issue, monthly volume and cost, evidence,
    the ask, a suggested owner and date, and how impact will be measured. Write each ask
-   so it can be forwarded on its own.
+   so it can be forwarded on its own. Include:
+   - **Return and exchange reasons by product**: wrong size, defect, not as described,
+     changed mind. Each points to a product page, sizing guide or quality fix.
+   - **Customer data problems** seen in conversations: missing or wrong contact details,
+     duplicate accounts, order records that disagree with what the customer received.
+   - **Partner performance**: contacts caused by each carrier, payment provider, supplier,
+     marketplace or outsourced support team, against what was agreed with them.
 8. **Quality.** Score a sample every month, 10 bot-handled and 10 handed-over
    conversations, for correctness against the knowledge and tool results, policy
    adherence, completeness and tone. Report the scores, the errors nobody complained
-   about, and the trend.
+   about, and the trend. Each quarter, ask a team member to score 5 of the same
+   conversations and report where your scores and theirs differ, so the scoring stays
+   calibrated. Where playground tools are available (`createAgentPlaygroundSession`,
+   `sendAgentPlaygroundMessage`), run 5 to 10 test conversations on the scenarios that
+   matter most (a delayed order, a return outside the window, a defect, a pre-sale
+   question) and score them the same way.
 9. **Knowledge health.** Facts the team keeps giving by hand that the knowledge lacks,
    entries that contradict each other or the prompt, and dated facts (old prices, ended
    promotions). Hand bot-level fixes to `cx-review-loop`; report the pattern here.
@@ -183,18 +204,33 @@ ask for it once in the summary message and record the answer in the note.
     hours, customers left waiting, whether handover summaries let staff act without
     asking again. Each outage or failure: duration, contacts affected, how customers
     were told, what prevents a repeat.
-11. **Revenue.** Revenue from conversations, pre-sale questions that end without a
-    purchase, restock requests by product, products and sizes asked for that are not
-    sold, upsell moments, and counts of competitor mentions ("cheaper at", "faster at").
-    Competitor mentions are counts from conversations, not market research.
+11. **Revenue and retention.** Judge support by the revenue it keeps and creates, not
+    only the contacts it deflects:
+    - **Retention**: repeat purchase after contact, split by whether the problem was
+      solved and how long it took; customers asking to cancel an order or subscription,
+      and what kept the ones who stayed; high-value or repeat customers who had a bad
+      experience, listed for outreach by their owner.
+    - **Revenue from conversations**: attributed revenue, pre-sale questions that end
+      without a purchase, upsell moments.
+    - **Demand**: restock requests by product, products and sizes asked for that are not
+      sold, with counts for buying and merchandising.
+    - **Reputation**: well-solved conversations as the moment to ask for a review, and
+      whether that ask happens.
+    - **Competitors**: counts of mentions ("cheaper at", "faster at"). Counts from
+      conversations, not market research.
 12. **Goodwill and compensation.** Coupons, refunds and credits staff gave, from operator
     threads: how many, typical value, whether they match the policy. Recommend clear
     limits for what staff and the agent may grant.
 13. **Readiness for upcoming changes.** For each known sale, launch or policy change:
     the expected contact increase based on the last similar event, and what to prepare
-    (knowledge, staffing, a message sent before customers ask).
-14. **Risks.** Rising complaint themes, fraud or phishing reaching support, privacy
-    issues, tool failures, wrong-answer trends.
+    (knowledge, staffing, a message sent before customers ask). Keep a short protocol for
+    known disruptions (carrier delays, stock-outs, holidays, site outages): who tells
+    customers, through which channel, with what message, and what the agent's knowledge
+    says meanwhile.
+14. **Risks.** Rising complaint themes, fraud or phishing reaching support, refund and
+    return abuse patterns, privacy issues, tool failures, wrong-answer trends. Contacts
+    about safety (injury, allergic reaction, a product hazard) are counted separately,
+    with how fast a person handled each, and flagged for the legal adviser.
 15. **Last month's decisions.** Each decision, its owner, whether it was done, what the
     numbers did, and a verdict: keep, adjust or reverse.
 
