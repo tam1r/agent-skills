@@ -8,8 +8,9 @@ description: Run the recurring improvement loop for an assigned Agent Studio sup
 Two routines for the support agent you are assigned to, both ending in the same
 propose, approve, apply steps:
 
-- **Weekly handover review**: read last week's handovers and what the human agents
-  did next, and propose the changes that would have let the bot handle them.
+- **Weekly handover review**: measure last week's automation against the weeks
+  before, read every handover and what the human agents did next, and propose the
+  changes that would have let the bot handle them.
 - **Daily feedback follow-up**: ask the team what to do with feedback items that
   are still open.
 
@@ -19,46 +20,110 @@ You propose. The team decides in the chat. You apply only what they approved.
 
 - Use the installed `adelante-agent-studio-analyst` skill for the Agent Studio MCP
   tools and for how to read conversations, prompts and knowledge. Discover the
-  live tool list first; if `listHandovers`, `getOperatorThread`,
-  `listFeedbackIssues`, `submitFeedback`, `approveFeedbackFix` or
-  `dismissFeedbackIssue` is missing or returns 403, say which one is missing and
-  run the rest read-only. Use only the scoped connection you were given.
+  live tool list first. This skill uses `getConversationAnalytics`,
+  `listHandovers`, `getConversation`, `getOperatorThread`, `getAgentPrompt`,
+  `listSnippets`, `getTool`, `listFeedbackIssues`, `submitFeedback`,
+  `approveFeedbackFix` and `dismissFeedbackIssue`. If one is missing or returns
+  403, say which one and run the rest read-only. Use only the scoped connection
+  you were given.
 - Write to the team in their language, in the chat where this routine runs.
-- Keep a review log (see "Review log") so a reply days later still maps to the
-  right item.
+- Read the review log (see "Review log") before anything else, so a reply days
+  later still maps to the right item and decisions already made are not asked again.
 
 ## Weekly handover review
 
-1. Call `listHandovers` for the last 7 complete days. Page until you have every
-   row. If there are more than 150, take the newest 150 and say so in the report.
-2. For each handover read `getOperatorThread` to see what the human did after the
-   bot handed over. Group by what the human did, and use the bot's handover
-   reason only as a hint. When the human side is unavailable for a conversation, count
-   it as "no human reply available" and leave it out of the conclusions.
-3. Sort every handover into one of three kinds, from the human's reply:
-   - **Reply only**: the human answered with information the bot had or could have had.
-   - **One action**: the human did one back-office step, then replied.
-   - **Judgment**: several steps, an exception, or back-and-forth.
-4. Group them into themes. For each theme record the count for the week, two or
-   three session IDs, and what the human typically answered.
-5. For each theme decide what would remove it:
-   - **Wording**: the team already answers it the same way, or the prompt and
-     knowledge disagree with each other. This is the only kind you propose as a
-     change to apply.
-   - **Tool gap**: the bot lacks an action or a piece of data.
-   - **Team decision**: the bot would be doing something it does not do today,
-     or the team's replies differ from the written policy.
-   - **Bot error**: a tool call failed or returned something wrong. List the
-     ticket IDs for Adelante; the team does not need to decide anything.
-6. Check last week's applied changes: for each one, did the same theme come back
-   this week? Report it in one line per change.
-7. Send one message (see "Message format"): the week's handover count and rate,
-   the top themes with counts, then the numbered proposals and questions.
+### 1. Measure
+
+1. Call `getConversationAnalytics` for the agent over the last 7 complete days,
+   and once over the 28 days before them. Report the week's conversations, bot
+   handovers and automation rate next to the 4-week rate. When the agent runs on
+   more than one channel, give the rate per channel from `byChannel`; channels
+   behave very differently. If the analytics tool is unavailable, report counts
+   without a rate and say why.
+2. Note anything that changed in the period: changes applied from the review log,
+   and model or prompt changes you can see. A rate moves for many reasons; name the
+   ones you know and do not credit or blame a change from one week of numbers.
+
+The analytics count conversations by their start date and count every
+conversation where a handover tool ran. `listHandovers` matches the handover
+call's time. Expect small differences between the two and say which number
+you quote.
+
+### 2. Read every handover
+
+1. Call `listHandovers` for the same 7 days. Page until you have every row. If
+   there are more than 150, take the newest 150 and say so.
+2. Open the transcript (`getConversation`) when `handoverCompleted` is false or
+   `handoverCount` is above 1. A conversation with no completed handover call was
+   not handed over: count it apart as "attempted, not handed over", and check
+   whether the customer was left waiting (that is a bot error).
+3. Count apart, and leave out of the themes, contacts that are not customers:
+   vendor pitches, newsletters, phishing, automated notices, internal staff
+   threads. If the bot replied to one wrongly, list it as a bot error.
+4. For every remaining handover read both sides: `getConversation` for what the
+   customer asked, what the bot looked up and what it said before transferring,
+   and `getOperatorThread` for what the human did next. When the human side is
+   unavailable, count it as "no human reply available" and keep it out of the
+   conclusions.
+
+### 3. Classify each handover on two axes
+
+**Why the bot handed over.** Decide from the transcript. `handoverReasonType` is the
+bot's own label and only a hint: "other" and missing labels are common.
+
+- **Rule**: the prompt or knowledge tells the bot to transfer this case. Quote the rule.
+- **Customer asked**: the customer asked for a person. If the request followed a
+  weak or wrong answer, classify by that cause instead.
+- **Missing information**: the bot lacked a fact the customer needed. Name the fact.
+- **Missing tool**: the request needs an action or data the bot has no tool for.
+- **Tool failure**: a tool errored, or returned wrong or contradictory data.
+- **Bot-caused**: the bot offered a transfer the customer did not ask for, hedged,
+  or said it could not confirm something, while its knowledge, a product page or a
+  tool result had the answer. Cite where the answer was.
+
+**What the human did**, from the operator thread:
+
+- **Reply only**: answered with information the bot had or could have had.
+- **One action**: one back-office step, then a reply.
+- **Judgment**: several steps, an exception, or back-and-forth.
+
+### 4. Group into themes and decide what removes each
+
+Group by cause and topic. For each theme record the week's count, two or three
+session IDs, and what the human typically answered, without customer personal data.
+
+| Cause | Human did | What to propose |
+|---|---|---|
+| Missing information | Reply only | A knowledge addition holding the answer the team gave. First search the knowledge for it (`listSnippets`): if the fact is already there, the problem is retrieval or a contradiction, not a missing fact, and the proposal fixes that entry. |
+| Bot-caused | any | The smallest wording change to the prompt or knowledge entry involved, written as what the bot should do ("answer the fit question from both product pages"). |
+| Two sources disagree | any | One wording that removes the conflict, quoting both. Prompt, knowledge entries and tool descriptions (`getTool`) can each disagree with the others, and two knowledge entries can disagree with each other. Ask which is correct if the conversations do not show it. |
+| Rule | Reply only | A question: keep the rule, or let the bot answer with the text the team used? Give your recommendation. |
+| Rule | Action or judgment | Nothing to change. Count it. |
+| Customer asked, at the start | any | Nothing to change. Count it. |
+| Missing tool | any | A tool-gap question for Adelante, with the decisions it depends on. |
+| Tool failure | any | List the session IDs for Adelante. The team does not need to decide anything. |
+| Team answers differ from policy | any | A question to the team. |
+
+Before proposing, check `listFeedbackIssues` for an open item on the same theme,
+and the review log for a decision already taken. Ask a decided question again only
+when its weekly count has clearly grown.
+
+### 5. Check last week's applied changes
+
+For each change applied since the previous review, compare the theme's count in
+the 7 days before the change with the days since. Read one or two conversations
+of that theme since the change and check the bot handled them and its answer was
+right. Report one line per change: held, partly, not seen yet, or worse.
+
+### 6. Send one message
+
+See "Message format": the rate line, the top themes with counts, the applied-change
+check, then the numbered proposals and questions.
 
 A handover in `listHandovers` is a conversation where the bot called its handover
 tool. Human takeovers and system-triggered handovers are not in it, so the count
-can be lower than the helpdesk's. Say "bot handovers", and give counts with their
-week.
+can be lower than the helpdesk's. Say "bot handovers", and give every count with
+its week.
 
 ## Daily feedback follow-up
 
@@ -74,12 +139,14 @@ week.
 
 **Propose**
 
-- A wording proposal from the weekly review is filed with `submitFeedback` on one
+- A proposal from the weekly review is filed with `submitFeedback` on one
   representative conversation (`source: Handover Analysis`). Put the theme, the
   weekly count and the example session IDs in the feedback text. Then read the
   created item back: the fix it holds is what would be applied.
 - Always show the exact text that will change: the current wording and the new
   wording, or the new knowledge entry. Never ask for approval of a summary.
+- Keep each change small and write it as what the bot should do. Prefer adding a
+  fact to the knowledge over adding a rule to the prompt. One change per theme.
 - Number every proposal and question in the message and write the same numbers
   in the review log.
 - Tool gaps and team decisions are questions, not changes. Ask them in the same
@@ -116,19 +183,25 @@ week.
 ## Review log
 
 Keep one file, `cx-review-log.md`, in your persistent workspace. One line per
-item: number, date, feedback issue ID, short title, state (proposed, approved by
-whom and when, applied, dismissed with reason, waiting on Adelante, waiting on
-team). Read it at the start of every run and before acting on a reply. It is the
-source for "what is still waiting" and for next week's check on applied changes.
-Keep customer personal data out of it; use session IDs.
+item: number, date, feedback issue ID, short title, theme, state (proposed,
+approved by whom and when, applied on which date, dismissed with reason, waiting on
+Adelante, waiting on team). Record team decisions on rules and policy questions
+too ("keep the transfer rule for X, decided by whom, when"). Add one line per week
+with the conversations, bot handovers and automation rate. Read it at the start of
+every run and before acting on a reply. It is the source for "what is still
+waiting", for the applied-change check and for not asking a decided question
+again. Keep customer personal data out of it; use session IDs.
 
 ## Message format
 
 - One message per run. Short lines, numbered items, no tables.
-- Lead with the one or two things that need an answer today.
+- First line: "Last week: N bot handovers in M conversations, X% automated
+  (4-week average Y%)."
+- Then the one or two things that need an answer today.
 - Every count carries its period ("12 bot handovers last week").
 - Weekly: at most six proposals or questions. Daily: at most six items.
-- Say when a number is partial (capped at 150, human replies unavailable).
+- Say when a number is partial (capped at 150, human replies unavailable,
+  analytics unavailable) and how many contacts were left out as not customers.
 
 ## Scheduling in a hosted runtime
 

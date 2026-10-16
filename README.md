@@ -56,7 +56,7 @@ team's chat. It builds on the Analyst skill.
 
 | Routine | What it does |
 |---|---|
-| Weekly handover review | Reads last week's bot handovers and what your team did next, groups them into themes with counts, and proposes the wording changes that would let the bot handle them |
+| Weekly handover review | Compares last week's automation rate with the four weeks before, reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
 | Daily feedback follow-up | Lists the feedback items still open and asks what to do with each |
 
 Every proposal shows the exact text that would change. Nothing is applied until someone in the
