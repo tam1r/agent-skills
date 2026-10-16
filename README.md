@@ -69,6 +69,27 @@ npx skills add tam1r/agent-skills \
   -g -y
 ```
 
+## CX Director Review
+
+The `cx-director-review` skill prepares the decision brief for whoever runs customer
+experience. It builds on the Analyst skill and reads the CX Review Loop's log.
+
+| Cadence | What it does |
+|---|---|
+| Weekly health pulse | Five lines: volume, real resolution, satisfaction, time to a person, spikes and incidents |
+| Monthly review | Scorecard, voice of the customer, top recommendations, policy recommendations with pilots, prevent / automate / keep human per contact reason, asks for each owning team, quality, knowledge health, revenue, goodwill, readiness for upcoming changes, risks, and last month's decisions |
+| Quarterly review | Targets, capacity and staffing, segments compared, cost and value of support, and a one-page executive summary |
+
+It recommends and never changes the agent or any setting. Every number carries its period and
+says whether it is measured or estimated.
+
+```bash
+npx skills add tam1r/agent-skills \
+  --skill adelante-agent-studio-analyst \
+  --skill cx-director-review \
+  -g -y
+```
+
 ## Install
 
 Install the skill globally and let the Skills CLI detect your coding agents:
