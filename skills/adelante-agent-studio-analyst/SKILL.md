@@ -114,6 +114,10 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `listConversations` | Conversation list for an agent, newest first (`limit`/`offset`; test sessions excluded unless `include_test=true`) |
 | `getConversation` | Stored AI-runtime transcript: messages (with `thinking` on AI messages when enabled), `toolUses`, metadata; not necessarily the complete helpdesk conversation |
 | `getOperatorThread` | Helpdesk continuation for the same `slug` and `sessionId`, including customer follow-ups and human replies; returns `source`, `transcript`, and structured `messages` for live reads |
+| `listHandovers` | Conversations where the bot called a handover tool in a window (`startDate`/`endDate`, default last 7 days, max 31; `limit`/`offset`; `pagination.total` for the window). Each row reports the first completed handover call in the window (else the first call) and has `sessionId`, `handoverAt`, `handoverCount`, `handoverCompleted`, `handoverReasonType`, `handoverReason`, `conversationSummary`, `firstCustomerMessage` and `toolsBeforeHandover` (`name`, `action`, `outcome`). Use it as the first step of a handover review instead of paging `listConversations`. A handover is any tool tagged `handover`; human takeovers and system-triggered handovers are not included |
+| `getConversationAnalytics` | The automation dashboard for a window (`from`/`to` calendar days on conversation start, `agent_slugs`, optional `channels`): conversations, handed over, AI solved, automation rate, daily trend, `byChannel`, ticket classifications, handover reason categories, helpdesk agent touches, CSAT. Needs analytics read access. Use it for every rate and trend instead of counting `listConversations` pages |
+| `listConversationAnalyticsDrilldown` | Up to 200 newest conversations behind one analytics number (`kind` such as `handed_over`, `channel`, `day` or `handover_reason`, with `value`) |
+| `getAgentStats` | Counts for one agent and window (`from`/`to`, conversations started in it): total and handed-over sessions, sessions flagged for review, and calls and failures per tool. Needs analytics read access |
 | `resolveTicketConversation` | Zendesk ticket number → its conversation; not a resolver for arbitrary helpdesk links or Crisp IDs |
 | `listAgentTools` / `listTools` / `getTool` | Bound tool IDs, names, and parameter schemas; descriptions only for `agent_specific` tools |
 | `listAgentKnowledgeBases` / `listKnowledgeBases` / `getKnowledgeBase` | Knowledge bases linked to the agent |
@@ -199,7 +203,10 @@ an actual access denial remains a boundary and must not be bypassed.
    tool output / KB gap / model behavior) → recommended fix.
 
 **Aggregate analysis** (handover rate, common intents, failure patterns):
-1. `listConversations` over the period (test sessions are already excluded by default).
+1. Take counts and rates from `getConversationAnalytics` (or `getAgentStats`) for the period, and
+   compare with the same length of time before it. Use `listHandovers`, the analytics drilldown or
+   `listConversations` (test sessions are already excluded by default) for the conversations
+   behind a number.
 2. Read `getConversation` and `getOperatorThread` for each reviewed conversation. Classify
    from both records and `toolUses`; a handover tool call is evidence of an attempted handover,
    while helpdesk evidence may show a transfer outside the AI turn. Its absence alone does not
