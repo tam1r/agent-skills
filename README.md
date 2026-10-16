@@ -56,7 +56,7 @@ team's chat. It builds on the Analyst skill.
 
 | Routine | What it does |
 |---|---|
-| Weekly handover review | Compares last week's automation rate with the four weeks before, reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
+| Weekly handover review | Compares last week's automation rate with the four weeks before, adds health lines (satisfaction, time to a person, spikes, incidents), reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
 | Daily feedback follow-up | Lists the feedback items still open and asks what to do with each |
 
 Every proposal shows the exact text that would change. Nothing is applied until someone in the
@@ -66,6 +66,27 @@ team chat approves it, and each applied change is read back and confirmed.
 npx skills add tam1r/agent-skills \
   --skill adelante-agent-studio-analyst \
   --skill cx-review-loop \
+  -g -y
+```
+
+## CX Director Review
+
+The `cx-director-review` skill prepares the decision brief for whoever runs customer
+experience. It builds on the Analyst skill and reads the CX Review Loop's log, including its
+weekly health lines.
+
+| Cadence | What it does |
+|---|---|
+| Monthly review | Scorecard, voice of the customer, top recommendations, policy recommendations with pilots, prevent / automate / keep human per contact reason, asks for each owning team, quality, knowledge health, revenue, goodwill, readiness for upcoming changes, risks, and last month's decisions |
+| Quarterly review | Targets, capacity and staffing, segments compared, cost and value of support, and a one-page executive summary |
+
+It recommends and never changes the agent or any setting. Every number carries its period and
+says whether it is measured or estimated.
+
+```bash
+npx skills add tam1r/agent-skills \
+  --skill adelante-agent-studio-analyst \
+  --skill cx-director-review \
   -g -y
 ```
 
