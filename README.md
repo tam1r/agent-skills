@@ -56,11 +56,11 @@ team's chat. It builds on the Analyst skill.
 
 | Routine | What it does |
 |---|---|
-| Weekly handover review | Compares last week's automation rate with the four weeks before, reads every bot handover and what your team did next, sorts each by why the bot handed over, and proposes the knowledge or wording changes that would let the bot handle them |
+| Weekly handover review | Compares last week's automation rate with the four weeks before, reads every bot handover and what your team did next, sorts each by why the bot handed over, and recommends the knowledge or wording changes that would let the bot handle them. Only recommendations supported by at least 10% of the week's handed-over conversations reach the team |
 | Daily feedback follow-up | Lists the feedback items still open and asks what to do with each |
 
-Every proposal shows the exact text that would change. Nothing is applied until someone in the
-team chat approves it, and each applied change is read back and confirmed.
+Each change is kept with its exact text under a permanent approval number. Nothing is applied
+until someone in the team chat approves it, and each applied change is read back and confirmed.
 
 ```bash
 npx skills add tam1r/agent-skills \
