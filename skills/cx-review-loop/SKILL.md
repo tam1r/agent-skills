@@ -83,9 +83,15 @@ uses the `listHandovers` set, never the analytics count.
    customer asked, what the bot looked up and what it said before transferring,
    and `getOperatorThread` for what the human did next. When the human side is
    unavailable, count it as "no human reply available" and keep it out of the
-   conclusions.
+   conclusions. When the operator thread shows the ticket closed or solved with no
+   human reply after the handover, the customer was left waiting: list it for the
+   team in the weekly message.
 4. Keep a list of the conversations you could not read or classify. They stay in
    the denominator, and the report says how many there were.
+5. Conversations the handover list misses: look for ones where the bot placed a
+   warehouse hold or told the customer the team would follow up, but never called
+   its handover tool. Nobody sees these. Report each as a bot error; they are not
+   in the handover set and do not change the denominator.
 
 ### 4. Classify each handover on two axes
 
@@ -100,7 +106,9 @@ bot's own label and only a hint: "other" and missing labels are common.
 - **Tool failure**: a tool errored, or returned wrong or contradictory data.
 - **Bot-caused**: the bot offered a transfer the customer did not ask for, hedged,
   or said it could not confirm something, while its knowledge, a product page or a
-  tool result had the answer. Cite where the answer was.
+  tool result had the answer. Cite where the answer was. Also bot-caused: work the
+  bot created for the team, such as a warehouse hold it placed that only a person
+  can release.
 
 **What the human did**, from the operator thread:
 
@@ -131,7 +139,7 @@ this agent's handover set for this week.
 | Rule | Action or judgment | Nothing to change. Count it. |
 | Customer asked, at the start | any | Nothing to change. Count it. |
 | Missing tool | any | Technical gap: a tool for Adelante to build, with the decisions it depends on. |
-| Tool failure | any | Technical gap: the failing tool and what it returned, for Adelante. |
+| Tool failure | any | Technical gap: the failing tool and what it returned, for Adelante. First check the failure still occurs after the latest applied change; if its last occurrence predates the fix, it is not a gap. |
 | Team answers differ from policy | any | Policy question to the team. |
 | An open feedback item or earlier recommendation no longer matches what the conversations show | any | Closure: close or dismiss it, with the reason. |
 
