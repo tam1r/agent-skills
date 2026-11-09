@@ -123,6 +123,8 @@ The key is provided by the Adelante team. Keep it out of git — prefer an envir
 | `listAgentKnowledgeBases` / `listKnowledgeBases` / `getKnowledgeBase` | Knowledge bases linked to the agent |
 | `listDocuments` / `getDocument` / `listSnippets` | KB content the agent answers from |
 | `getAgentRoutingIndex` | The topic index the agent uses to pick KB chunks |
+| `listExternalRequestContacts` | When the agent has `request_external_info`: the external contacts it can ask (branches, stores, warehouses, suppliers) with each contact's name, channel, description, `allowed_topics` and `on_no_reply`. Contact destinations (phone, email, group id) are never returned |
+| `listExternalRequestThreads` | Past External Requests the agent sent (contact, question, answers, status), newest first; filter by `session_id` to see one conversation's requests |
 | `listFeedbackIssues` | Feedback issues filed against the agent (`agentSlug` required; filter by `status`, `source`, `startDate`/`endDate`) |
 | `getAttributedRevenue` | Revenue attributed to the agent's conversations (`agentSlug` required; `days` or `startDate`/`endDate`) |
 | `submitFeedback` | Analyst only: creates and analyzes feedback for a scoped conversation |
@@ -199,6 +201,15 @@ an actual access denial remains a boundary and must not be bypassed.
    to your key (e.g. a shared tool's description), say which source remained unchecked and keep
    the verdict conditional on it. Never conclude a rule does not exist from the sources you could
    read alone.
+   When the bot handed over, or told the customer it could not check or verify something (stock,
+   whether an order or repair is at a branch, a supplier detail), check whether it could have asked
+   an external contact instead: if `getAgent` shows `request_external_info`, call
+   `listExternalRequestContacts` and compare the question with each contact's `allowed_topics`, and
+   use `listExternalRequestThreads` for earlier requests on the same kind of question. Then quote the
+   KB chunk or prompt rule that sent the bot to a handover. When a configured contact covers the
+   question, the recommended fix is to route that flow to the contact (edit the governing KB chunk or
+   rule so the bot asks the contact first and hands over only when the request expires). Say "the bot
+   has no way to check" only after confirming no contact covers it.
 4. Verdict format: what the customer wanted → what the agent did → root cause (prompt rule /
    tool output / KB gap / model behavior) → recommended fix.
 
