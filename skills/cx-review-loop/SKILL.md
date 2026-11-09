@@ -127,10 +127,11 @@ this agent's handover set for this week.
 | Missing information | Reply only | Fix: a knowledge addition holding the answer the team gave. First search the knowledge for it (`listSnippets`): if the fact is already there, the problem is retrieval or a contradiction, not a missing fact, and the fix corrects that entry. |
 | Bot-caused | any | Fix: the smallest wording change to the prompt or knowledge entry involved, written as what the bot should do ("answer the fit question from both product pages"). |
 | Two sources disagree | any | Fix: one wording that removes the conflict. Prompt, knowledge entries and tool descriptions (`getTool`) can each disagree with the others, and two knowledge entries can disagree with each other. If the conversations do not show which is correct, it is a policy question instead. |
+| Rule or missing check, and a configured external contact covers the question (`listExternalRequestContacts` topics: branch stock, an order or repair at a branch, a supplier detail) | Asked the branch/supplier, or replied after checking | Fix: route the flow to that contact. Edit the knowledge entry or rule that sends the bot to a handover so it asks the contact with `request_external_info` first and hands over only when the request expires. Not a wording change. |
 | Rule | Reply only | Policy question: keep the rule, or let the bot answer with the text the team used? Give your recommendation. |
 | Rule | Action or judgment | Nothing to change. Count it. |
 | Customer asked, at the start | any | Nothing to change. Count it. |
-| Missing tool | any | Technical gap: a tool for Adelante to build, with the decisions it depends on. |
+| Missing tool | any | Technical gap: a tool for Adelante to build, with the decisions it depends on. First confirm no configured external contact covers it (`listExternalRequestContacts`). |
 | Tool failure | any | Technical gap: the failing tool and what it returned, for Adelante. |
 | Team answers differ from policy | any | Policy question to the team. |
 | An open feedback item or earlier recommendation no longer matches what the conversations show | any | Closure: close or dismiss it, with the reason. |
