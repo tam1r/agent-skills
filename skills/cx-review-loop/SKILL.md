@@ -24,7 +24,7 @@ Reviewing or recommending a change does not authorize applying or dismissing it.
   tools and for how to read conversations, prompts and knowledge. Discover the
   live tool list first. This skill uses `getConversationAnalytics`,
   `listHandovers`, `getConversation`, `getOperatorThread`, `getAgentPrompt`,
-  `listSnippets`, `getTool`, `listFeedbackIssues`, `submitFeedback`,
+  `listAgentKnowledgeBases`, `listDocuments`, `listSnippets`, `getTool`, `listFeedbackIssues`, `submitFeedback`,
   `approveFeedbackFix` and `dismissFeedbackIssue`. If one is missing or returns
   403, say which one and run the rest read-only. Use only the scoped connection
   you were given.
@@ -38,8 +38,12 @@ Reviewing or recommending a change does not authorize applying or dismissing it.
 
 ### 1. Measure
 
-1. Call `getConversationAnalytics` for the agent over the last 7 complete days,
-   and once over the 28 days before them. Report the week's conversations, bot
+1. The review week is the 7 complete days that end 2 business days before the
+   run, so the team has had time to answer the last handovers. Without the lag
+   the newest handovers have no human reply yet and cannot be classified (in a
+   test run, all 50 handovers from the last day had none). Call
+   `getConversationAnalytics` for the agent over the review week, and once over
+   the 28 days before it. Report the week's conversations, bot
    handovers and automation rate next to the 4-week rate. When the agent runs on
    more than one channel, give the rate per channel from `byChannel`; channels
    behave very differently. If the analytics tool is unavailable, report counts
@@ -55,7 +59,7 @@ uses the `listHandovers` set, never the analytics count.
 
 ### 2. Collect the full handover set
 
-1. Call `listHandovers` for the agent and the same 7 days. Page with
+1. Call `listHandovers` for the agent and the same review week. Page with
    `limit`/`offset` until you have every row that `pagination.total` reports.
    Do not stop at a cap and do not sample.
 2. The handover set is the distinct `sessionId` values returned. Remove
@@ -72,16 +76,30 @@ uses the `listHandovers` set, never the analytics count.
 
 ### 3. Read every handover
 
+Read every handover, but not every transcript. `getConversation` returns 30 to
+600 KB per conversation (knowledge chunks included), so opening all of them for a
+week of several hundred handovers costs millions of tokens. Classify from the
+cheap sources first and open the transcript only when they do not settle it.
+
 1. Open the transcript (`getConversation`) when `handoverCompleted` is false or
    `handoverCount` is above 1. A conversation with no completed handover call was
    not handed over: count it apart as "attempted, not handed over", and check
    whether the customer was left waiting (that is a bot error).
 2. Count apart, and leave out of the findings, contacts that are not customers:
    vendor pitches, newsletters, phishing, automated notices, internal staff
-   threads. If the bot replied to one wrongly, list it as a bot error.
-3. For every remaining handover read both sides: `getConversation` for what the
-   customer asked, what the bot looked up and what it said before transferring,
-   and `getOperatorThread` for what the human did next. When the human side is
+   threads, influencer and collaboration threads, story mentions and reactions,
+   job applicants. If the bot replied to one wrongly, list it as a bot error. A
+   bot that hands the same non-customer thread over again on every new message
+   or story is a bot error too.
+3. For every remaining handover read both sides. Start with the handover row
+   (the bot's reason and the tools it called before the handover) and
+   `getOperatorThread` for what the human did next. Open `getConversation` as
+   well when those do not show what the customer asked or why the bot
+   transferred: the reason is empty, "other" or vague, a tool result matters to
+   the classification, or the human answer suggests the bot had the answer.
+   In the operator thread, use only human messages sent after the handover time;
+   older messages in the thread and automated or marketing sends are not what
+   the human did next. When the human side is
    unavailable, count it as "no human reply available" and keep it out of the
    conclusions.
 4. Keep a list of the conversations you could not read or classify. They stay in
@@ -97,7 +115,12 @@ bot's own label and only a hint: "other" and missing labels are common.
   weak or wrong answer, classify by that cause instead.
 - **Missing information**: the bot lacked a fact the customer needed. Name the fact.
 - **Missing tool**: the request needs an action or data the bot has no tool for.
-- **Tool failure**: a tool errored, or returned wrong or contradictory data.
+  This includes a transfer rule that exists only because the bot has no tool for
+  the step (changing a courier delivery, cancelling an order): classify it here,
+  not as Rule, so the gap is counted.
+- **Tool failure**: a tool errored, or returned wrong or contradictory data. A
+  lookup that correctly returned "not found" (no order for that phone number) is
+  a valid answer, not a failure, even when `listHandovers` marks the call failed.
 - **Bot-caused**: the bot offered a transfer the customer did not ask for, hedged,
   or said it could not confirm something, while its knowledge, a product page or a
   tool result had the answer. Cite where the answer was.
@@ -124,7 +147,7 @@ this agent's handover set for this week.
 
 | Cause | Human did | Finding type and what to propose |
 |---|---|---|
-| Missing information | Reply only | Fix: a knowledge addition holding the answer the team gave. First search the knowledge for it (`listSnippets`): if the fact is already there, the problem is retrieval or a contradiction, not a missing fact, and the fix corrects that entry. |
+| Missing information | Reply only | Fix: a knowledge addition holding the answer the team gave. First search the knowledge for it (`listAgentKnowledgeBases`, then `listDocuments` per knowledge base, then `listSnippets` per document): if the fact is already there, the problem is retrieval or a contradiction, not a missing fact, and the fix corrects that entry. |
 | Bot-caused | any | Fix: the smallest wording change to the prompt or knowledge entry involved, written as what the bot should do ("answer the fit question from both product pages"). |
 | Two sources disagree | any | Fix: one wording that removes the conflict. Prompt, knowledge entries and tool descriptions (`getTool`) can each disagree with the others, and two knowledge entries can disagree with each other. If the conversations do not show which is correct, it is a policy question instead. |
 | Rule | Reply only | Policy question: keep the rule, or let the bot answer with the text the team used? Give your recommendation. |
